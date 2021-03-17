@@ -93,6 +93,9 @@ class Frontend(QtGui.QMainWindow):
         self.browsefile = self.ui.pushButton_browsefile
         self.browsefile.clicked.connect(self.select_file)
         
+        self.browseN0calibfile = self.ui.pushButton_browsefile_N0cal
+        self.browseN0calibfile.clicked.connect(self.select_N0calfile)
+        
         self.browsecalibfile = self.ui.pushButton_browsecalibfile
         self.browsecalibfile.clicked.connect(self.select_calibfile)
         
@@ -151,9 +154,26 @@ class Frontend(QtGui.QMainWindow):
             root.withdraw()
             root.filenamedata = filedialog.askopenfilename(initialdir=self.initialDir,
                                                       title = 'Select file',
-                                                      filetypes = [('hdf5 files','.hdf5')])
+                                                      filetypes = [('hdf5 files','.hdf5'),
+                                                                   ('csv file', '.csv')])
             if root.filenamedata != '':
                 self.ui.lineEdit_filename.setText(root.filenamedata)
+                
+        except OSError:
+            pass
+        
+        if root.filenamedata == '':
+            return
+    
+    def select_N0calfile(self):
+        try:
+            root = Tk()
+            root.withdraw()
+            root.filenameN0cal = filedialog.askopenfilename(initialdir=self.initialDir,
+                                                      title = 'Select N0 calib file',
+                                                      filetypes = [('hdf5 files','.hdf5')])
+            if root.filenamedata != '':
+                self.ui.lineEdit_filename_N0cal.setText(root.filenameN0cal)
                 
         except OSError:
             pass
@@ -300,17 +320,21 @@ class Frontend(QtGui.QMainWindow):
                                           pen=ROIpen)    
                 
                 self.roi.label.hide()
+                xmin, ymin = self.roi.pos()
+                xmax, ymax = self.roi.pos() + self.roi.size()
                 
-                scatterWidgetROI = pg.GraphicsLayoutWidget()
+                print(xmin)
+                
+                # scatterWidgetROI = pg.GraphicsLayoutWidget()
                 
                 
-                plotROIxz = scatterWidgetROI.addPlot(title="Scatter plot ROI (x,z)")
-                plotROIxz.setLabels(bottom=('x [nm]'), left=('z [nm]'))
-                plotROIxz.setAspectLocked(True)
+                # plotROIxz = scatterWidgetROI.addPlot(title="Scatter plot ROI (x,z)")
+                # plotROIxz.setLabels(bottom=('x [nm]'), left=('z [nm]'))
+                # plotROIxz.setAspectLocked(True)
                 
-                ROIxz = pg.ScatterPlotItem(xind, yind, pen=pg.mkPen(None),
-                                        brush=[pg.mkBrush(v) for v in col])
-                plotxylarge.addItem(ROIxz)
+                # ROIxz = pg.ScatterPlotItem(xind, yind, pen=pg.mkPen(None),
+                #                         brush=[pg.mkBrush(v) for v in col])
+                # plotxylarge.addItem(ROIxz)
                 
             
             else:
@@ -461,9 +485,7 @@ class Backend(QtCore.QObject):
     @pyqtSlot()   
     def SIMPLER_function(self):
         
-        
-        print(datetime.now(), 'start SIMPLER analysis')
-        
+      
         #File Importation
         if self.fileformat == 0: # Importation procedure for Picasso hdf5 files.
             
@@ -487,7 +509,7 @@ class Backend(QtCore.QObject):
             # Extraxt headers names
             headers = dataset.columns.values
             
-            # data from dif columns           
+            # data from different columns           
             frame = dataset[headers[0]].values
             xdata = dataset[headers[1]].values 
             ydata = dataset[headers[2]].values
@@ -496,7 +518,7 @@ class Backend(QtCore.QObject):
             
         else: # Importation procedure for custom csv files.
             pass
-            
+            #TO DO write importation for custom files 
 #            full_list = csvread(filename_wformat);
 #            frame = full_list(:,1);
 #            xloc = full_list(:,2);
@@ -647,8 +669,13 @@ class Backend(QtCore.QObject):
             
             print(datetime.now(), 'end SIMPLER analysis')
             self.sendSIMPLERSignal.emit(simpler_output, frame)
-           
+    
+    def N0_cal(self):
         
+        pass
+        
+        
+
             
     def make_connection(self, frontend):
         
