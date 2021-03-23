@@ -56,6 +56,7 @@ class Frontend(QtGui.QMainWindow):
     loadfileSignal = pyqtSignal()
     loadcalibfileSignal = pyqtSignal()
     updatecalSignal = pyqtSignal()
+    N0calSignal = pyqtSignal()
     runSIMPLERSignal = pyqtSignal()
 
 
@@ -86,6 +87,11 @@ class Frontend(QtGui.QMainWindow):
         self.fileformat.currentIndexChanged.connect(self.emit_param)
         
         
+        self.N0calfileformat = self.ui.comboBox_N0calfileformat
+        self.N0calfileformat.addItems(fileformat_list)
+        self.N0calfileformat.currentIndexChanged.connect(self.emit_param)
+        
+        
         NA_list = ["1.42", "1.45", "1.49"]
         self.NA = self.ui.comboBox_NA
         self.NA.addItems(NA_list)
@@ -101,6 +107,9 @@ class Frontend(QtGui.QMainWindow):
         
         self.updatecal = self.ui.pushButton_updatecal
         self.updatecal.clicked.connect(self.update_cal)
+        
+        self.N0cal = self.ui.pushButton_N0cal
+        self.N0cal.clicked.connect(self.N0_cal)
         
         self.runSIMPLER = self.ui.pushButton_runSIMPLER
         self.runSIMPLER.clicked.connect(self.run_SIMPLER)
@@ -127,7 +136,9 @@ class Frontend(QtGui.QMainWindow):
         params = dict()
         
         params['fileformat'] = int(self.fileformat.currentIndex())
+        params['N0calfileformat'] = int(self.N0calfileformat.currentIndex())
         params['filename'] = self.ui.lineEdit_filename.text()
+        params['N0calfilename'] = self.ui.lineEdit_filename_N0cal.text()
         params['calibfilename'] = self.ui.lineEdit_calibfilename.text()
         params['illumcorr'] = self.illumcorr.isChecked()
         params['rz_xyz'] = int(self.selectop.currentIndex())
@@ -171,14 +182,15 @@ class Frontend(QtGui.QMainWindow):
             root.withdraw()
             root.filenameN0cal = filedialog.askopenfilename(initialdir=self.initialDir,
                                                       title = 'Select N0 calib file',
-                                                      filetypes = [('hdf5 files','.hdf5')])
-            if root.filenamedata != '':
+                                                      filetypes = [('hdf5 files','.hdf5'),
+                                                                   ('csv file', '.csv')])
+            if root.filenameN0cal != '':
                 self.ui.lineEdit_filename_N0cal.setText(root.filenameN0cal)
                 
         except OSError:
             pass
         
-        if root.filenamedata == '':
+        if root.filenameN0cal == '':
             return
         
     
@@ -202,12 +214,18 @@ class Frontend(QtGui.QMainWindow):
         
         self.emit_param()
         self.updatecalSignal.emit()
-        print('update cal')
+        
+    def N0_cal(self):
+        
+        self.emit_param()
+        self.N0calSignal.emit()
+        print('N0 cal send')
+     
+        
     
     def run_SIMPLER(self):
         
         self.emit_param()
-        print('run SIMPLER')
         self.runSIMPLERSignal.emit()
     
     @pyqtSlot(np.ndarray, np.ndarray)    
@@ -355,6 +373,17 @@ class Frontend(QtGui.QMainWindow):
         text = 'dF=' + str(np.round(dF, decimals=2)) +\
             ' alphaF=' + str(np.round(alphaF, decimals=2)) 
         self.ui.lineEdit_updatecal.setText(text)
+        
+    
+    @pyqtSlot(np.float, np.float)    
+    def dispNO(self):
+        
+        print('dispN0')      
+        text = 'N0=' + str(np.round(N0m, decimals=2)) +\
+            ' sigmaN0=' + str(np.round(sigmaN0, decimals=2)) 
+        self.ui.lineEdit_updatecal.setText(text)
+        
+        
     
     @pyqtSlot(np.ndarray, np.ndarray)    
     def dispframef(self, simpler_output, frame):
@@ -372,6 +401,7 @@ class Frontend(QtGui.QMainWindow):
         backend.sendupdatecalSignal.connect(self.dispupdateparam)
         backend.sendSIMPLERSignal.connect(self.scatterplot)
         backend.sendSIMPLERSignal.connect(self.dispframef)
+        
 
         
                 
@@ -383,6 +413,7 @@ class Backend(QtCore.QObject):
     paramSignal = pyqtSignal(dict)
     sendupdatecalSignal = pyqtSignal(np.float, np.float)
     sendSIMPLERSignal = pyqtSignal(np.ndarray, np.ndarray)
+    
         
     def __init__(self, *args, **kwargs):
         
@@ -395,6 +426,8 @@ class Backend(QtCore.QObject):
         # updates parameters according to what is input in the GUI
         self.fileformat = params['fileformat']
         self.filename = params['filename']
+        self.N0calfileformat = params['N0calfileformat']
+        self.N0calfilename = params['N0calfilename']
         self.calibfilename = params['calibfilename']
         self.rz_xyz = params['rz_xyz']
         self.illum = params['illumcorr']
@@ -413,8 +446,7 @@ class Backend(QtCore.QObject):
             
     @pyqtSlot()
     def getParameters_SIMPLER(self):
-        
-        
+                
         # Angle
         if self.angle == 0:
             self.angle = np.arcsin(self.NA/self.ni)
@@ -477,101 +509,12 @@ class Backend(QtCore.QObject):
         print(self.dF)
         self.sendupdatecalSignal.emit(self.dF, self.alphaF)
        
-        
-        
-        
-                
     
-    @pyqtSlot()   
-    def SIMPLER_function(self):
+         
         
-      
-        #File Importation
-        if self.fileformat == 0: # Importation procedure for Picasso hdf5 files.
-            
-            # Read H5 file
-            f = h5.File(self.filename, "r")
-            dataset = f['locs']
-        
-            # Load  input HDF5 file
-            frame = dataset['frame']
-            photon_raw = dataset['photons']
-            bg = dataset['bg']          
-            
-            xdata = dataset['x'] 
-            ydata = dataset['y'] 
-        
-        
-        elif self.fileformat == 1: # Importation procedure for ThunderSTORM csv files.
-            
-            ## Read ThunderSTRORM csv file
-            dataset = pd.read_csv(self.filename)
-            # Extraxt headers names
-            headers = dataset.columns.values
-            
-            # data from different columns           
-            frame = dataset[headers[0]].values
-            xdata = dataset[headers[1]].values 
-            ydata = dataset[headers[2]].values
-            photon_raw = dataset[headers[3]].values
-            bg = dataset[headers[4]].values
-            
-        else: # Importation procedure for custom csv files.
-            pass
-            #TO DO write importation for custom files 
-#            full_list = csvread(filename_wformat);
-#            frame = full_list(:,1);
-#            xloc = full_list(:,2);
-#            yloc = full_list(:,3);
-#            photon_raw = full_list(:,4);
-#            if size(full_list,2)>4
-#                bg = full_list(:,5);
-        
-        
-        
-        # Convert x,y,sd values from 'camera subpixels' to nanometres
-        x = xdata * self.pxsize
-        y = ydata * self.pxsize
-        
-        if self.illum == True:
-            # CORRECT PHOTON COUNTS
-
-            # To perform this correction, the linear dependency between local laser
-            # power intensity and local background photons is used. Photons are
-            # converted to the value they would have if the whole image was illuminated
-            # with the maximum laser power intensity. This section is executed if the
-            # user has chosen to perform correction due to non-flat illumination.
-        
-            datacalib = pd.read_csv(self.calibfilename)
-            profiledata = pd.DataFrame(datacalib)
-            profile = profiledata.values
-        
-        
-            phot = photon_raw
-            max_bg = np.percentile(profile, 97.5)
-            phot_corr = np.zeros(photon_raw.size)
-        
-            # Correction loop
-            
-            profx = np.size(profile,0) 
-            profy = np.size(profile,1) 
-            
-            print(len(phot))
-            
-            for i in np.arange(len(phot)):
-                if int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) < profy:
-                    phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.ceil(ydata[i]))])
-                elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) < profy:
-                    phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.ceil(ydata[i]))])
-                elif int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) > profy:
-                    phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.floor(ydata[i]))])
-                elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) > profy:
-                    phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.floor(ydata[i]))])
-        
-        else:
-            phot_corr = photon_raw
-        
-                
+    
+    def filter_locs(self,x, y, frame, phot_corr, max_dist):
+         
         # Build the output array
         listLocalizations = np.column_stack((x, y, frame, phot_corr))
              
@@ -610,8 +553,7 @@ class Backend(QtCore.QObject):
             # are located at distances < max_dist, and are detected in frames N and (N+1)
             # or (N-1). In any other case, it will take a value of 0.
         
-            max_dist = self.maxdist # Value in nanometers
-            
+                       
             for i in range(min_range, max_range):
                 for j in range(min_range, max_range):
                     daa[j-min_div_N*(N)] = ((x[i]-x[j])**2+(y[i]-y[j])**2)**(1/2)
@@ -637,6 +579,107 @@ class Backend(QtCore.QObject):
         
         x = x.flatten()
         y = y.flatten()
+        
+        return x,y,photons,framef
+        
+    def illum_correct(self, calibfilename, photon_raw, xdata, ydata):
+        
+        # To perform this correction, the linear dependency between local laser
+        # power intensity and local background photons is used. Photons are
+        # converted to the value they would have if the whole image was illuminated
+        # with the maximum laser power intensity. This section is executed if the
+        # user has chosen to perform correction due to non-flat illumination.
+        
+        datacalib = pd.read_csv(self.calibfilename)
+        profiledata = pd.DataFrame(datacalib)
+        profile = profiledata.values
+        
+        
+        phot = photon_raw
+        max_bg = np.percentile(profile, 97.5)
+        phot_corr = np.zeros(photon_raw.size)
+        
+        # Correction loop
+        profx = np.size(profile,0) 
+        profy = np.size(profile,1) 
+        
+        for i in np.arange(len(phot)):
+            if int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) < profy:
+                phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.ceil(ydata[i]))])
+            elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) < profy:
+                phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.ceil(ydata[i]))])
+            elif int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) > profy:
+                phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.floor(ydata[i]))])
+            elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) > profy:
+                phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.floor(ydata[i]))])
+        
+        return phot_corr
+                    
+    
+    @pyqtSlot()   
+    def SIMPLER_function(self):
+          
+        #File Importation
+        if self.fileformat == 0: # Importation procedure for Picasso hdf5 files.
+            
+            # Read H5 file
+            f = h5.File(self.filename, "r")
+            dataset = f['locs']
+        
+            # Load  input HDF5 file
+            frame = dataset['frame']
+            photon_raw = dataset['photons']
+            bg = dataset['bg']          
+            
+            xdata = dataset['x'] 
+            ydata = dataset['y'] 
+        
+        
+        elif self.fileformat == 1: # Importation procedure for ThunderSTORM csv files.
+            
+            ## Read ThunderSTRORM csv file
+            dataset = pd.read_csv(self.filename)
+            # Extraxt headers names
+            headers = dataset.columns.values
+            
+            # data from different columns           
+            frame = dataset[headers[0]].values
+            xdata = dataset[headers[1]].values 
+            ydata = dataset[headers[2]].values
+            photon_raw = dataset[headers[3]].values
+            bg = dataset[headers[4]].values
+            
+        else: # Importation procedure for custom csv files.
+        
+        # TODO : import custom csv file 
+            pass 
+#            full_list = csvread(filename_wformat);
+#            frame = full_list(:,1);
+#            xloc = full_list(:,2);
+#            yloc = full_list(:,3);
+#            photon_raw = full_list(:,4);
+#            if size(full_list,2)>4
+#                bg = full_list(:,5);
+
+        
+        
+        # Convert x,y,sd values from 'camera subpixels' to nanometres
+        x = xdata * self.pxsize
+        y = ydata * self.pxsize
+        
+        # Correct photon counts if illum profile not uniform 
+        if self.illum == True:
+                        
+            calibfilename = self.calibfilename
+            phot_corr = self.illum_correct(calibfilename, photon_raw, xdata, ydata)
+                    
+        else:
+            phot_corr = photon_raw
+        print('end')
+        # Filter localizations using max dist
+        max_dist = self.maxdist # Value in nanometers
+               
+        x,y,photons,framef = self.filter_locs(x, y, frame, phot_corr, max_dist)
         
         # Z-Calculation
 
@@ -670,9 +713,86 @@ class Backend(QtCore.QObject):
             print(datetime.now(), 'end SIMPLER analysis')
             self.sendSIMPLERSignal.emit(simpler_output, frame)
     
-    def N0_cal(self):
+    @pyqtSlot()
+    def N0_calibration(self):
+     
+        #File Importation
+        if self.N0calfileformat == 0: # Importation procedure for Picasso hdf5 files.
+            
+            # Read H5 file
+            f = h5.File(self.N0calfilename, "r")
+            dataset = f['locs']
         
-        pass
+            # Load  input HDF5 file
+            frame = dataset['frame']
+            photon_raw = dataset['photons']
+            bg = dataset['bg']          
+            
+            xdata = dataset['x'] 
+            ydata = dataset['y'] 
+        
+        
+        elif self.N0calfileformat == 1: # Importation procedure for ThunderSTORM csv files.
+            
+            ## Read ThunderSTRORM csv file
+            dataset = pd.read_csv(self.N0calfilename)
+            # Extraxt headers names
+            headers = dataset.columns.values
+            
+            # data from different columns           
+            frame = dataset[headers[0]].values
+            xdata = dataset[headers[1]].values 
+            ydata = dataset[headers[2]].values
+            photon_raw = dataset[headers[3]].values
+            bg = dataset[headers[4]].values
+            
+        else: # Importation procedure for custom csv files.
+            pass   
+        
+        # Convert x,y,sd values from 'camera subpixels' to nanometres
+        x = xdata * self.pxsize
+        y = ydata * self.pxsize
+        
+        # Correct photon counts if illum profile not uniform 
+        if self.illum == True:
+            
+            calibfilename = self.calibfilename
+            phot_corr = self.illum_correct(calibfilename, photon_raw, xdata, ydata)
+                    
+        else:
+            phot_corr = photon_raw
+            
+        print('correct done')
+        # Filter localizations using max dist
+        max_dist = self.maxdist # Value in nanometers
+        print(np.size(frame))       
+        x,y,photons,framef = self.filter_locs(x, y, frame, phot_corr, max_dist)
+        print('filter done')
+        # For the "N0 Calibration" operation, there is no "Z calculation", 
+        # because the aim of this procedure is to obtain N0 from a sample which 
+        # is supposed to contain molecules located at z ~ 0.
+        xl = np.array([np.amax(x), np.amin(x)]) 
+        yl = np.array([np.amax(y), np.amin(y)]) 
+        c = np.arange(0,np.size(x))
+        
+        hist, bin_edges = np.histogram(photons[c], bins = 20, density = True)
+        bin_limits = np.array([bin_edges[0], bin_edges[-1]])
+        bin_centres = (bin_edges[:-1] + bin_edges[1:])/2
+    
+        # Gaussian fit of the N0 distribution
+        def gauss(x, *p):
+            A, mu, sigma = p
+            return A*np.exp(-(x-mu)**2/(2.*sigma**2))
+        
+        # p0 is the initial guess for the fitting coefficients (A, mu and sigma above)
+        A0 = np.max(hist)
+        mu0 = np.mean(bin_centres)
+        sigma0 = np.std(bin_centres)
+        p0 = [A0, mu0, sigma0]
+        coeff, var_matrix = curve_fit(gauss, bin_centres, hist, p0=p0)   
+        
+        
+        print(coeff)
         
         
 
@@ -681,6 +801,7 @@ class Backend(QtCore.QObject):
         
         frontend.paramSignal.connect(self.get_frontend_param)
         frontend.updatecalSignal.connect(self.getParameters_SIMPLER)
+        frontend.N0calSignal.connect(self.N0_calibration)
         frontend.runSIMPLERSignal.connect(self.SIMPLER_function)
         
         

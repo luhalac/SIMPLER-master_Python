@@ -783,6 +783,7 @@
     <property name="title">
      <string>SIMPLER</string>
     </property>
+    <addaction name="separator"/>
    </widget>
    <addaction name="menuSIMPLER"/>
   </widget>

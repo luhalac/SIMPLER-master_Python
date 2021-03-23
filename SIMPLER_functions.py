@@ -46,8 +46,6 @@ sd = (sx*2 + sy*2)**0.5
 # Take x,y,sd values in camera subpixels
 camera_px = 133
 
-
-
 # Convert x,y,sd values from 'camera subpixels' to nanometres
 xloc = x * camera_px
 yloc = y * camera_px
@@ -63,34 +61,39 @@ yloc = y * camera_px
 # with the maximum laser power intensity. This section is executed if the
 # user has chosen to perform correction due to non-flat illumination.
 
-#'calib_file_name.csv'
-# filename_csv = 'excitation_profile_spectrin.csv'
+filename_csv = 'excitation_profile_mt.csv'
 
-# datacalib = pd.read_csv(filename_csv)
-# profiledata = pd.DataFrame(datacalib)
-# profile = profiledata.values
-# # print(matplotlib.pyplot.imshow(profile))
+datacalib = pd.read_csv(filename_csv)
+profiledata = pd.DataFrame(datacalib)
+profile = profiledata.values
+# print(matplotlib.pyplot.imshow(profile))
 
-# phot = photon_raw
-# max_bg = np.percentile(profile, 97.5)
-# phot_corr = np.zeros(photon_raw.size)
+phot = photon_raw
+max_bg = np.percentile(profile, 97.5)
+phot_corr = np.zeros(photon_raw.size)
 
-# # Correction loop
+# Correction loop
 
-# profx = np.size(profile,0) 
-# profy = np.size(profile,1) 
+profx = np.size(profile,0) 
+profy = np.size(profile,1) 
 
-# for i in range(phot.size):
-#     if int((np.ceil(x[i]))) < profx and int((np.ceil(y[i]))) < profy:
-#         phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(x[i])),int(np.ceil(y[i]))])
-#     elif int((np.ceil(x[i]))) > profx and int((np.ceil(y[i]))) < profy:
-#         phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(x[i])),int(np.ceil(y[i]))])
-#     elif int((np.ceil(x[i]))) < profx and int((np.ceil(y[i]))) > profy:
-#         phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(x[i])),int(np.floor(y[i]))])
-#     elif int((np.ceil(x[i]))) > profx and int((np.ceil(y[i]))) > profy:
-#         phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(x[i])),int(np.floor(y[i]))])
+xdata = x
+ydata = y
+
+for i in np.arange(len(phot)):
+    print(i)
+    if int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) < profy:
+        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.ceil(ydata[i]))])
+    elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) < profy:
+        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.ceil(ydata[i]))])
+    elif int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) > profy:
+        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.floor(ydata[i]))])
+    elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) > profy:
+        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.floor(ydata[i]))])
+
+
     
-phot_corr = photon_raw
+# phot_corr = photon_raw
         
 # Build the output array
 listLocalizations = np.column_stack((xloc, yloc, frame, phot_corr))
@@ -163,54 +166,54 @@ photons1 = photons_idx
 # Small ROI and Large ROI cases
 
 
-z1 = (np.log(alphaF*N0)-np.log(photons1-(1-alphaF)*N0))/(1/dF)
-z1 = np.real(z1)
+# z1 = (np.log(alphaF*N0)-np.log(photons1-(1-alphaF)*N0))/(1/dF)
+# z1 = np.real(z1)
 
-# Scatter plots / Projection r vs. z, x vs. z , y vs. z
-# ------------------------------------------------------------------------
-# If the selected operation is "(r,z) Small ROI", we perform a first step 
-# where the main axis is obtained from a linear fit of the (x,y) data
+# # Scatter plots / Projection r vs. z, x vs. z , y vs. z
+# # ------------------------------------------------------------------------
+# # If the selected operation is "(r,z) Small ROI", we perform a first step 
+# # where the main axis is obtained from a linear fit of the (x,y) data
 
-x = x_idx.flatten()
-y = y_idx.flatten()
-z = z1.flatten()
+# x = x_idx.flatten()
+# y = y_idx.flatten()
+# z = z1.flatten()
 
-M = np.matrix([x,y,z])
-P = np.polyfit(x,y,1)
-yfit = P[0]*x + P[1]
-def Poly_fun(x):
-    y_polyfunc = P[0]*x + P[1]
-    return y_polyfunc
+# M = np.matrix([x,y,z])
+# P = np.polyfit(x,y,1)
+# yfit = P[0]*x + P[1]
+# def Poly_fun(x):
+#     y_polyfunc = P[0]*x + P[1]
+#     return y_polyfunc
 
-Origin_X = 0.99999*min(x)
-Origin_Y = Poly_fun(Origin_X)
+# Origin_X = 0.99999*min(x)
+# Origin_Y = Poly_fun(Origin_X)
 
-# Change from cartesian to polar coordinates
-tita = np.arctan(P[0])
-tita1 = np.arctan((y-Origin_Y)/(x-Origin_X))
-r = ((x-Origin_X)**2+(y-Origin_Y)**2)**(1/2)
-tita2 = [x - tita for x in tita1]
-proyec_r = np.cos(tita2)*r
-
-
-simpler_output = np.column_stack((x_idx, y_idx, proyec_r, z1, photons_idx, frame_idx))
+# # Change from cartesian to polar coordinates
+# tita = np.arctan(P[0])
+# tita1 = np.arctan((y-Origin_Y)/(x-Origin_X))
+# r = ((x-Origin_X)**2+(y-Origin_Y)**2)**(1/2)
+# tita2 = [x - tita for x in tita1]
+# proyec_r = np.cos(tita2)*r
 
 
+# simpler_output = np.column_stack((x_idx, y_idx, proyec_r, z1, photons_idx, frame_idx))
 
-ind = np.argsort(z)
-xind = x[ind]
-yind = y[ind]
-zind = z[ind]
-rind = r[ind]
 
-cmapz = cm.get_cmap('viridis', np.size(z))
+
+# ind = np.argsort(z)
+# xind = x[ind]
+# yind = y[ind]
+# zind = z[ind]
+# rind = r[ind]
+
+# cmapz = cm.get_cmap('viridis', np.size(z))
 
            
-col = cmapz.colors
-col = np.delete(col, np.s_[3], axis=1)
+# col = cmapz.colors
+# col = np.delete(col, np.s_[3], axis=1)
 
-plt.figure()
-plt.scatter(rind, zind, c=col)
+# plt.figure()
+# plt.scatter(rind, zind, c=col)
 
 
 
@@ -219,31 +222,32 @@ plt.scatter(rind, zind, c=col)
 # N0 Calibration
 
 # if rz_xyz == 5:
-#     # For the "N0 Calibration" operation, there is no "Z calculation", 
-#     # because the aim of this procedure is to obtain N0 from a sample which 
-#     # is supposed to contain molecules located at z ~ 0.
-#     xl = np.array([np.amax(x_idx), np.amin(x_idx)]) 
-#     yl = np.array([np.amax(y_idx), np.amin(y_idx)]) 
-#     c = np.arange(0,np.size(x_idx))
-    
-#     hist, bin_edges = np.histogram(photons_idx[c], bins = 20, density = True)
-#     bin_limits = np.array([bin_edges[0], bin_edges[-1]])
-#     bin_centres = (bin_edges[:-1] + bin_edges[1:])/2
+    # For the "N0 Calibration" operation, there is no "Z calculation", 
+    # because the aim of this procedure is to obtain N0 from a sample which 
+    # is supposed to contain molecules located at z ~ 0.
+xl = np.array([np.amax(x_idx), np.amin(x_idx)]) 
+yl = np.array([np.amax(y_idx), np.amin(y_idx)]) 
+c = np.arange(0,np.size(x_idx))
 
-#     # Gaussian fit of the N0 distribution
-#     def gauss(x, *p):
-#         A, mu, sigma = p
-#         return A*np.exp(-(x-mu)**2/(2.*sigma**2))
-    
-#     # p0 is the initial guess for the fitting coefficients (A, mu and sigma above)
-#     A0 = np.max(hist)
-#     mu0 = np.mean(bin_centres)
-#     sigma0 = np.std(bin_centres)
-#     p0 = [A0, mu0, sigma0]
-#     coeff, var_matrix = curve_fit(gauss, bin_centres, hist, p0=p0)   
-    
-#     # Get the fitted curve
-#     hist_fit = gauss(bin_centres, *coeff)
-#     plt.plot(bin_centres, hist, label='Non-fit data')
-#     plt.plot(bin_centres, hist_fit, label='Fitted data')
-#     plt.show()
+hist, bin_edges = np.histogram(photons_idx[c], bins = 40, density = False)
+bin_limits = np.array([bin_edges[0], bin_edges[-1]])
+bin_centres = (bin_edges[:-1] + bin_edges[1:])/2
+
+# Gaussian fit of the N0 distribution
+def gauss(x, *p):
+    A, mu, sigma = p
+    return A*np.exp(-(x-mu)**2/(2.*sigma**2))
+
+# p0 is the initial guess for the fitting coefficients (A, mu and sigma above)
+A0 = np.max(hist)
+mu0 = np.mean(bin_centres)
+sigma0 = np.std(bin_centres)
+p0 = [A0, mu0, sigma0]
+coeff, var_matrix = curve_fit(gauss, bin_centres, hist, p0=p0)   
+
+# Get the fitted curve
+hist_fit = gauss(bin_centres, *coeff)
+plt.plot(bin_centres, hist, label='Non-fit data')
+plt.hist(photons_idx[c], bins = 40)
+plt.plot(bin_centres, hist_fit, label='Fitted data')
+plt.show()
