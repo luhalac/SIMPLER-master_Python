@@ -6,14 +6,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import os
-import colormaps as cmaps
 from matplotlib import cm
 
 os.chdir(r'C:\Users\Lucia\Documents\NanoFísica\SIMPLER\SIMPLER-master_MATLAB\SIMPLER-master\Example data')
 
 
 # Define filename
-filename = "example_mt.hdf5"
+filename = "example_Fab.hdf5"
 
 # Read H5 file
 f = h5.File(filename, "r")
@@ -61,7 +60,7 @@ yloc = y * camera_px
 # with the maximum laser power intensity. This section is executed if the
 # user has chosen to perform correction due to non-flat illumination.
 
-filename_csv = 'excitation_profile_mt.csv'
+filename_csv = 'excitation_profile_fab.csv'
 
 datacalib = pd.read_csv(filename_csv)
 profiledata = pd.DataFrame(datacalib)
@@ -81,7 +80,7 @@ xdata = x
 ydata = y
 
 for i in np.arange(len(phot)):
-    print(i)
+    
     if int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) < profy:
         phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.ceil(ydata[i]))])
     elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) < profy:
@@ -93,7 +92,7 @@ for i in np.arange(len(phot)):
 
 
     
-# phot_corr = photon_raw
+phot_corr = photon_raw
         
 # Build the output array
 listLocalizations = np.column_stack((xloc, yloc, frame, phot_corr))
@@ -158,10 +157,10 @@ photons_idx = listLocalizations[idx_filtered,3].T
 
 #%% Z-Calculation
 
-alphaF = 0.96
-N0 = 51000
-dF = 87.7
-photons1 = photons_idx
+# alphaF = 0.96
+# N0 = 51000
+# dF = 87.7
+# photons1 = photons_idx
 
 # Small ROI and Large ROI cases
 

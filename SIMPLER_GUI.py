@@ -7,12 +7,13 @@ Created on Tue Nov 21 14:05:18 2019
 GUI for SIMPLER analysis 
 
 conda command for converting QtDesigner file to .py:
-pyuic5 -x SIMPLER_GUI_design.ui -o SIMPLER_GUI_design.py
+pyuic5 -x SIMPLER_GUI_designtabs.ui -o SIMPLER_GUI_design.py
     
 """
 
 import os
 import copy
+
 
 os.chdir(r'C:\Users\Lucia\Documents\NanoFísica\SIMPLER\SIMPLER-master_Python')
 
@@ -28,6 +29,7 @@ import numpy as np
 from scipy import optimize as opt
 from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
+import circle_fit
 
 
 import pyqtgraph as pg
@@ -74,6 +76,7 @@ class Frontend(QtGui.QMainWindow):
         self.largeROI = self.ui.groupBox_largeROI
         self.largeROI.hide()
         
+        
         self.dF = 0.0
         self.alphaF = 0.0
         
@@ -90,6 +93,10 @@ class Frontend(QtGui.QMainWindow):
         self.N0calfileformat = self.ui.comboBox_N0calfileformat
         self.N0calfileformat.addItems(fileformat_list)
         self.N0calfileformat.currentIndexChanged.connect(self.emit_param)
+        
+        self.incanglefileformat = self.ui.comboBox_incanglefileformat
+        self.incanglefileformat.addItems(fileformat_list)
+        self.incanglefileformat.currentIndexChanged.connect(self.emit_param)
         
         
         NA_list = ["1.42", "1.45", "1.49"]
@@ -117,14 +124,14 @@ class Frontend(QtGui.QMainWindow):
         self.scatterch = self.ui.checkBox_scatter
         self.scatterch.stateChanged.connect(self.emit_param)
         
+        self.pushButton_smallROI = self.ui.pushButton_smallROI
+        self.pushButton_smallROI.clicked.connect(self.updateROIPlot)
+        
                
         
         operations_list = ["Small ROI (r,z)", 
                            "Small ROI (x,y,z)",
-                           "Large ROI",
-                           "N0 calibration",
-                           "Incidence angle & alpha adjustement (w/ kwown struct)",
-                           "Calculate exc profile from bkgd"]
+                           "Large ROI"]
         self.selectop =  self.ui.comboBox_selectop
         self.selectop.addItems(operations_list)
         self.selectop.currentIndexChanged.connect(self.emit_param)
@@ -253,6 +260,7 @@ class Frontend(QtGui.QMainWindow):
             col = cmapz.colors
             col = np.delete(col, np.s_[3], axis=1)
             col = 255*col
+            self.col = col
             
             if rz_xyz == 0:
                 
@@ -309,6 +317,8 @@ class Frontend(QtGui.QMainWindow):
                 
             elif rz_xyz == 2:
                 
+                self.xyarray = np.column_stack((xind,yind))
+                self.xyarray = self.xyarray.astype(np.float64)
                 self.largeROI.show()
                 scatterWidgetlarge = pg.GraphicsLayoutWidget()
                 plotxylarge = scatterWidgetlarge.addPlot(title="Scatter plot large ROI (x,y)")
@@ -317,9 +327,9 @@ class Frontend(QtGui.QMainWindow):
                 
         
                 
-                xy = pg.ScatterPlotItem(xind, yind, pen=pg.mkPen(None),
+                self.xy = pg.ScatterPlotItem(xind, yind, pen=pg.mkPen(None),
                                             brush=[pg.mkBrush(v) for v in col])
-                plotxylarge.addItem(xy)
+                plotxylarge.addItem(self.xy)
                
                 
                 self.empty_layout(self.ui.scatterlayout)
@@ -331,34 +341,49 @@ class Frontend(QtGui.QMainWindow):
 
                 
                 ROIpen = pg.mkPen(color='y')
-                self.roi = viewbox_tools.ROI(ROIextent, plotxylarge, ROIpos,
-                                          handlePos=(1, 0),
-                                          handleCenter=(0, 1),
-                                          rotatable=True,
-                                          pen=ROIpen)    
-                
-                self.roi.label.hide()
-                xmin, ymin = self.roi.pos()
-                xmax, ymax = self.roi.pos() + self.roi.size()
-                
-                print(xmin)
-                
-                # scatterWidgetROI = pg.GraphicsLayoutWidget()
-                
-                
-                # plotROIxz = scatterWidgetROI.addPlot(title="Scatter plot ROI (x,z)")
-                # plotROIxz.setLabels(bottom=('x [nm]'), left=('z [nm]'))
-                # plotROIxz.setAspectLocked(True)
-                
-                # ROIxz = pg.ScatterPlotItem(xind, yind, pen=pg.mkPen(None),
-                #                         brush=[pg.mkBrush(v) for v in col])
-                # plotxylarge.addItem(ROIxz)
-                
+                self.roi = pg.ROI(ROIpos, ROIextent)  
+                self.roi.setZValue(10)
+                self.roi.addScaleRotateHandle([0, 1], [1, 1])
+                self.roi.addScaleHandle([1, 0], [1, 1])                             
+                plotxylarge.addItem(self.roi)         
+                                             
             
             else:
                 pass
                 
-
+    def updateROIPlot(self):
+        
+                
+        scatterWidgetROI = pg.GraphicsLayoutWidget()
+        plotROI = scatterWidgetROI.addPlot(title="Scatter plot ROI selected")
+        plotROI.setLabels(bottom=('x [nm]'), left=('y [nm]'))
+        plotROI.setAspectLocked(True)
+        
+        xmin, ymin = self.roi.pos()
+        xmax, ymax = self.roi.pos() + self.roi.size()
+        
+        
+        x = self.xyarray[:,0]
+        y = self.xyarray[:,1]
+        
+        
+        indx = np.where((x>xmin) & (x<xmax))
+        indy = np.where((y>ymin) & (y<ymax))
+        
+        mask = np.in1d(indx, indy)
+        
+        ind = np.nonzero(mask)
+        index=indx[0][ind[0]]
+        
+        xroi = x[index]
+        yroi = y[index]
+        
+        self.selected = pg.ScatterPlotItem(xroi, yroi)     
+        plotROI.addItem(self.selected)
+        
+        self.empty_layout(self.ui.scatterlayout_3)
+        self.ui.scatterlayout_3.addWidget(scatterWidgetROI)
+        
     
     def empty_layout(self, layout):
         for i in reversed(range(layout.count())): 
@@ -510,8 +535,52 @@ class Backend(QtCore.QObject):
         self.sendupdatecalSignal.emit(self.dF, self.alphaF)
        
     
-         
+    def import_file(self):
         
+        #File Importation
+        if self.fileformat == 0: # Importation procedure for Picasso hdf5 files.
+            
+            # Read H5 file
+            f = h5.File(self.filename, "r")
+            dataset = f['locs']
+        
+            # Load  input HDF5 file
+            frame = dataset['frame']
+            photon_raw = dataset['photons']
+            bg = dataset['bg']          
+            
+            xdata = dataset['x'] 
+            ydata = dataset['y'] 
+        
+        
+        elif self.fileformat == 1: # Importation procedure for ThunderSTORM csv files.
+            
+            ## Read ThunderSTRORM csv file
+            dataset = pd.read_csv(self.filename)
+            # Extraxt headers names
+            headers = dataset.columns.values
+            
+            # data from different columns           
+            frame = dataset[headers[0]].values
+            xdata = dataset[headers[1]].values 
+            ydata = dataset[headers[2]].values
+            photon_raw = dataset[headers[3]].values
+            bg = dataset[headers[4]].values
+            
+        else: # Importation procedure for custom csv files.
+        
+        # TODO : import custom csv file 
+            pass 
+#            full_list = csvread(filename_wformat);
+#            frame = full_list(:,1);
+#            xloc = full_list(:,2);
+#            yloc = full_list(:,3);
+#            photon_raw = full_list(:,4);
+#            if size(full_list,2)>4
+#                bg = full_list(:,5);
+
+        return xdata, ydata, frame, photon_raw, bg
+
     
     def filter_locs(self,x, y, frame, phot_corr, max_dist):
          
@@ -524,13 +593,13 @@ class Backend(QtCore.QObject):
         # located at a distance < max_dist, where max_dist is introduced by user
         # (20 nm by default).
 
-        min_div = 2500
+        min_div = 1000
+        print('filter init')
         # We divide the list into sub-lists of 'min_div' locs to minimize memory usage
 
         Ntimes_min_div = int((listLocalizations[:,0].size/min_div))
         
         truefalse_sum_roi_acum = []
-        listLocalizations_filtered = np.zeros((int(min_div*Ntimes_min_div),listLocalizations[1,:].size))  
         
         daa = np.zeros(listLocalizations[:,0].size)
         frame_dif = np.zeros(listLocalizations[:,0].size)
@@ -579,7 +648,7 @@ class Backend(QtCore.QObject):
         
         x = x.flatten()
         y = y.flatten()
-        
+        print('filter end')
         return x,y,photons,framef
         
     def illum_correct(self, calibfilename, photon_raw, xdata, ydata):
@@ -619,49 +688,7 @@ class Backend(QtCore.QObject):
     @pyqtSlot()   
     def SIMPLER_function(self):
           
-        #File Importation
-        if self.fileformat == 0: # Importation procedure for Picasso hdf5 files.
-            
-            # Read H5 file
-            f = h5.File(self.filename, "r")
-            dataset = f['locs']
-        
-            # Load  input HDF5 file
-            frame = dataset['frame']
-            photon_raw = dataset['photons']
-            bg = dataset['bg']          
-            
-            xdata = dataset['x'] 
-            ydata = dataset['y'] 
-        
-        
-        elif self.fileformat == 1: # Importation procedure for ThunderSTORM csv files.
-            
-            ## Read ThunderSTRORM csv file
-            dataset = pd.read_csv(self.filename)
-            # Extraxt headers names
-            headers = dataset.columns.values
-            
-            # data from different columns           
-            frame = dataset[headers[0]].values
-            xdata = dataset[headers[1]].values 
-            ydata = dataset[headers[2]].values
-            photon_raw = dataset[headers[3]].values
-            bg = dataset[headers[4]].values
-            
-        else: # Importation procedure for custom csv files.
-        
-        # TODO : import custom csv file 
-            pass 
-#            full_list = csvread(filename_wformat);
-#            frame = full_list(:,1);
-#            xloc = full_list(:,2);
-#            yloc = full_list(:,3);
-#            photon_raw = full_list(:,4);
-#            if size(full_list,2)>4
-#                bg = full_list(:,5);
-
-        
+        xdata, ydata, frame, photon_raw, bg = self.import_file()
         
         # Convert x,y,sd values from 'camera subpixels' to nanometres
         x = xdata * self.pxsize
@@ -717,37 +744,7 @@ class Backend(QtCore.QObject):
     def N0_calibration(self):
      
         #File Importation
-        if self.N0calfileformat == 0: # Importation procedure for Picasso hdf5 files.
-            
-            # Read H5 file
-            f = h5.File(self.N0calfilename, "r")
-            dataset = f['locs']
-        
-            # Load  input HDF5 file
-            frame = dataset['frame']
-            photon_raw = dataset['photons']
-            bg = dataset['bg']          
-            
-            xdata = dataset['x'] 
-            ydata = dataset['y'] 
-        
-        
-        elif self.N0calfileformat == 1: # Importation procedure for ThunderSTORM csv files.
-            
-            ## Read ThunderSTRORM csv file
-            dataset = pd.read_csv(self.N0calfilename)
-            # Extraxt headers names
-            headers = dataset.columns.values
-            
-            # data from different columns           
-            frame = dataset[headers[0]].values
-            xdata = dataset[headers[1]].values 
-            ydata = dataset[headers[2]].values
-            photon_raw = dataset[headers[3]].values
-            bg = dataset[headers[4]].values
-            
-        else: # Importation procedure for custom csv files.
-            pass   
+        xdata, ydata, frame, photon_raw, bg = self.import_file() 
         
         # Convert x,y,sd values from 'camera subpixels' to nanometres
         x = xdata * self.pxsize
@@ -762,12 +759,11 @@ class Backend(QtCore.QObject):
         else:
             phot_corr = photon_raw
             
-        print('correct done')
         # Filter localizations using max dist
         max_dist = self.maxdist # Value in nanometers
         print(np.size(frame))       
         x,y,photons,framef = self.filter_locs(x, y, frame, phot_corr, max_dist)
-        print('filter done')
+        
         # For the "N0 Calibration" operation, there is no "Z calculation", 
         # because the aim of this procedure is to obtain N0 from a sample which 
         # is supposed to contain molecules located at z ~ 0.
@@ -792,9 +788,62 @@ class Backend(QtCore.QObject):
         coeff, var_matrix = curve_fit(gauss, bin_centres, hist, p0=p0)   
         
         
-        print(coeff)
         
         
+    def inc_angle_alpha(self):
+        
+        #File Importation
+        xdata, ydata, frame, photon_raw, bg = self.import_file()   
+        
+        # Convert x,y,sd values from 'camera subpixels' to nanometres
+        x = xdata * self.pxsize
+        y = ydata * self.pxsize
+        
+    def obtain_bg(self):
+        
+        xdata, ydata, frame, photon_raw, bg = self.import_file()
+        
+        # Convert x,y,sd values from 'camera subpixels' to nanometres
+        x = xdata * self.pxsize
+        y = ydata * self.pxsize
+        
+        ## Excitation profile calculation and exportation:
+        Img_bg = np.zeros((np.int(np.ceil(np.max(xdata))), np.int(np.ceil(np.max(ydata)))))
+        # Empty matrix to be filled with background values pixel-wise.
+             
+        Count_molec_px = Img_bg # Empty matrix to be filled with the number of molecules
+                                     # used to calcualte local background for each pixel.
+             
+        # If the list contains > 1,000,000 localizations, only 500,000 are used in
+        # order to speed up the analysis and avoid redundancy.
+        vector_indices = np.arange(0,np.size(xdata))
+        c_random = np.random.permutation(np.size(vector_indices))
+        length_c_random = np.int(np.min([1e+6, np.size(x)]))
+        range_c = range(0,length_c_random)
+        c = c_random[range_c]
+        
+        
+        for i in range(0, np.size(x[c])):
+            
+            # The #molecules used to calculate local background in current pixel is updated.
+            xind = np.int(np.ceil(xdata[c[i]]))-1
+            yind = np.int(np.ceil(ydata[c[i]]))-1
+            Count_molec_px[xind, yind] = Count_molec_px[xind, yind] + 1
+            Count_i = Count_molec_px[xind, yind]
+            
+            # If the current pixel's background has already been estimated, then its 
+            # value is updated through a weighted average:
+            count_div = (Count_i-1)/Count_i
+            if Count_i > 1:
+                Img_bg[xind, yind] = count_div * (Img_bg[xind, yind]) + (1/Count_i) * bg[c[i]] 
+            else:
+                Img_bg[xind, yind] = bg[c[i]]
+        
+
+        
+    def fit_circle(self):
+       
+       pass
 
             
     def make_connection(self, frontend):
