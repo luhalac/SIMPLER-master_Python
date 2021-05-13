@@ -1,5 +1,9 @@
-#%% IMPORT HDF5 FILE
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Apr 19 16:33:28 2021
 
+@author: Lucia
+"""
 import numpy as np
 import h5py as h5
 import pandas as pd
@@ -7,6 +11,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import os
 from matplotlib import cm
+from skimage.morphology import square, dilation
 
 os.chdir(r'C:\Users\Lucia\Documents\NanoFísica\SIMPLER\SIMPLER-master_MATLAB\SIMPLER-master\Example data')
 
@@ -29,79 +34,17 @@ sx = dataset['lpx']
 sy = dataset['lpy']
 sd = (sx*2 + sy*2)**0.5
 
-# Define filename
-# filename = "example_mt_Thunderstorm.csv"
-# dataset = pd.read_csv(filename)
-# headers = dataset.columns.values
-
-# ## Read ThunderSTRORM csv file
-
-# frame = dataset[headers[0]].values
-# x = dataset[headers[1]].values 
-# y = dataset[headers[2]].values
-# photon_raw = dataset[headers[3]].values
-# bg = dataset[headers[4]].values
-
 # Take x,y,sd values in camera subpixels
 camera_px = 133
 
 # Convert x,y,sd values from 'camera subpixels' to nanometres
 xloc = x * camera_px
 yloc = y * camera_px
-# sxloc = dataset['lpx'] * camera_px
-# syloc = dataset['lpy'] * camera_px
-# sdloc = (sxloc*2 + syloc*2)**0.5
 
-#%% CORRECT PHOTON COUNTS
+phot_corr = photon_raw
 
-# To perform this correction, the linear dependency between local laser
-# power intensity and local background photons is used. Photons are
-# converted to the value they would have if the whole image was illuminated
-# with the maximum laser power intensity. This section is executed if the
-# user has chosen to perform correction due to non-flat illumination.
-
-filename_csv = 'excitation_profile_mt.csv'
-
-datacalib = pd.read_csv(filename_csv)
-profiledata = pd.DataFrame(datacalib)
-profile = profiledata.values
-# print(matplotlib.pyplot.imshow(profile))
-
-phot = photon_raw
-max_bg = np.percentile(profile, 97.5)
-phot_corr = np.zeros(photon_raw.size)
-
-# Correction loop
-
-profx = np.size(profile,0) 
-profy = np.size(profile,1) 
-
-xdata = x
-ydata = y
-
-for i in np.arange(len(phot)):
-    
-    if int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) < profy:
-        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.ceil(ydata[i]))])
-    elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) < profy:
-        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.ceil(ydata[i]))])
-    elif int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) > profy:
-        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.floor(ydata[i]))])
-    elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) > profy:
-        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.floor(ydata[i]))])
-
-
-    
-# phot_corr = photon_raw
-        
 # Build the output array
 listLocalizations = np.column_stack((xloc, yloc, frame, phot_corr))
-
-#%% REMOVING LOCS WITH NO LOCS IN i-1 AND i+1 FRAME
-
-# We keep a molecule if there is another one in the previous and next frame,
-# located at a distance < max_dist, where max_dist is introduced by user
-# (20 nm by default).
 
 min_div = 100.0
 # We divide the list into sub-lists of 'min_div' locs to minimize memory usage
@@ -155,6 +98,7 @@ y_idx = listLocalizations[idx_filtered,1].T
 frame_idx = listLocalizations[idx_filtered,2].T
 photons_idx = listLocalizations[idx_filtered,3].T
 
+
 #%% Z-Calculation
 
 alphaF = 0.96
@@ -184,7 +128,7 @@ def Poly_fun(x):
     y_polyfunc = P[0]*x + P[1]
     return y_polyfunc
 
-Origin_X = 0.999999*min(x)
+Origin_X = 0.99999*min(x)
 Origin_Y = Poly_fun(Origin_X)
 
 # Change from cartesian to polar coordinates
@@ -195,58 +139,84 @@ tita2 = [x - tita for x in tita1]
 proyec_r = np.cos(tita2)*r
 
 
-simpler_output = np.column_stack((x_idx, y_idx, proyec_r, z1, photons_idx, frame_idx))
+
+# This function builds a 2D matrix where each localizations is plotted as a
+# normalized Gaussian function.
+
+r = proyec_r
+
+mag=100
+sigma_lat=2
+sigma_ax=2   
 
 
 
-ind = np.argsort(z)
-xind = x[ind]
-yind = y[ind]
-zind = z[ind]
-rind = r[ind]
+# define px size in the SR image (in nm)
+pxsize_render = camera_px/mag
 
-# cmapz = cm.get_cmap('viridis', np.size(z))
+# re define origin for lateral and axial coordinates
+r_ori = r + sigma_lat
+z_ori = z + sigma_ax
 
-           
-# col = cmapz.colors
-# col = np.delete(col, np.s_[3], axis=1)
+# re define max
 
-# plt.figure()
-# plt.scatter(rind, zind, c=col)
+max_r = np.max(r) + sigma_lat
+max_z = np.max(z) + sigma_ax
+
+# 
+
+SMr = r_ori/pxsize_render
+SMz = z_ori/pxsize_render
+
+sigma_latpx = sigma_lat/pxsize_render
+sigma_axpx = sigma_ax/pxsize_render
+
+# Definition of pixels affected by the list of SM (+- 5*sigma)
+A = np.zeros((np.int(np.ceil(max_r/pxsize_render)), np.int(np.ceil(max_z/pxsize_render))))
+
+for i in np.arange(len(SMr)):
+    A[int(np.floor(SMr[i])), int(np.floor(SMz[i]))] = 1
+
+
+sigma_width_nm = np.max([sigma_lat, sigma_ax]);
+sigma_width_px = sigma_width_nm/pxsize_render;
+sd = square(int(np.round(5*sigma_width_px)));
+# This matrix contains 1 in +- 5 sigma units around the SM positions
+A_affected = dilation(A,sd);
+# r and z positions affected
+indaffected = np.where(A_affected==1)
+raffected = indaffected[0]
+zaffected = indaffected[1]
+
+
+#'PSF' is a function that calculates the value for a given position (r,z)
+# assuming a 2D Gaussian distribution centered at (SMr(k),SMz(k))
+def PSF(r, z, SMr, SMz, I):
+    psf = (I/(2*np.pi*sigma_latpx*sigma_axpx))*np.exp(-(((r-SMr)**2)/(2*sigma_latpx**2) + ((z-SMz)**2)/(2*sigma_axpx**2)))
+    return psf
+
+# B = empty matrix that will be filled with the values given by the
+# Gaussian blur of the points listed in (SMr, SMz)
+B = np.zeros((np.int(np.ceil(5*sigma_width_px+(max_r/pxsize_render))), 
+              np.int(np.ceil(5*sigma_width_px+(max_z/pxsize_render)))))
+
+# For each molecule from the list
+for k in np.arange(len(SMr)):
+    # For each pixel of the final image with a value different from zero
+    for i in np.arange(len(raffected)): 
+        B[raffected[i],zaffected[i]] = B[raffected[i],zaffected[i]] + PSF(raffected[i],zaffected[i],SMr[k],SMz[k],1)
+        # Each 'affected' pixel (i) will take the value that had at the beggining
+        # of the k-loop + the value given by the distance to the k-molecule.
+    
+
+    
 
 
 
 
 
-# N0 Calibration
-
-# if rz_xyz == 5:
-    # For the "N0 Calibration" operation, there is no "Z calculation", 
-    # because the aim of this procedure is to obtain N0 from a sample which 
-    # is supposed to contain molecules located at z ~ 0.
-# xl = np.array([np.amax(x_idx), np.amin(x_idx)]) 
-# yl = np.array([np.amax(y_idx), np.amin(y_idx)]) 
-# c = np.arange(0,np.size(x_idx))
-
-# hist, bin_edges = np.histogram(photons_idx[c], bins = 40, density = False)
-# bin_limits = np.array([bin_edges[0], bin_edges[-1]])
-# bin_centres = (bin_edges[:-1] + bin_edges[1:])/2
-
-# # Gaussian fit of the N0 distribution
-# def gauss(x, *p):
-#     A, mu, sigma = p
-#     return A*np.exp(-(x-mu)**2/(2.*sigma**2))
-
-# # p0 is the initial guess for the fitting coefficients (A, mu and sigma above)
-# A0 = np.max(hist)
-# mu0 = np.mean(bin_centres)
-# sigma0 = np.std(bin_centres)
-# p0 = [A0, mu0, sigma0]
-# coeff, var_matrix = curve_fit(gauss, bin_centres, hist, p0=p0)   
-
-# # Get the fitted curve
-# hist_fit = gauss(bin_centres, *coeff)
-# plt.plot(bin_centres, hist, label='Non-fit data')
-# plt.hist(photons_idx[c], bins = 40)
-# plt.plot(bin_centres, hist_fit, label='Fitted data')
-# plt.show()
+        
+        
+        
+        
+        

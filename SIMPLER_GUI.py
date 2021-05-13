@@ -30,6 +30,7 @@ from scipy import optimize as opt
 from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
 import circle_fit
+from skimage.morphology import square, dilation
 
 
 import pyqtgraph as pg
@@ -60,6 +61,7 @@ class Frontend(QtGui.QMainWindow):
     updatecalSignal = pyqtSignal()
     N0calSignal = pyqtSignal()
     runSIMPLERSignal = pyqtSignal()
+    renderSignal = pyqtSignal()
 
 
     def __init__(self, *args, **kwargs):
@@ -127,7 +129,12 @@ class Frontend(QtGui.QMainWindow):
         self.pushButton_smallROI = self.ui.pushButton_smallROI
         self.pushButton_smallROI.clicked.connect(self.updateROIPlot)
         
-               
+        self.buttonxy = self.ui.radioButtonxy
+        self.buttonxz = self.ui.radioButtonxz
+        self.buttonyz = self.ui.radioButtonyz
+        
+        self.pushButton_render = self.ui.pushButton_render
+        self.pushButton_render.clicked.connect(self.run_render)
         
         operations_list = ["Small ROI (r,z)", 
                            "Small ROI (x,y,z)",
@@ -159,6 +166,10 @@ class Frontend(QtGui.QMainWindow):
         params['N0'] = float(self.ui.lineEdit_N0.text())
         params['NA'] = float(self.ui.comboBox_NA.currentText())
         params['maxdist'] = float(self.ui.lineEdit_maxdist.text())
+        params['mag'] = float(self.ui.lineEdit_mag.text())
+        params['sigmalat'] = float(self.ui.lineEdit_sigmalat.text())
+        params['sigmaax'] = float(self.ui.lineEdit_sigmaax.text())
+        
         self.scatter = self.scatterch.isChecked()
         
         
@@ -249,9 +260,9 @@ class Frontend(QtGui.QMainWindow):
             z = simpler_output[:,3]
             
             ind = np.argsort(z)
-            xind = x[ind]
-            yind = y[ind]
-            zind = z[ind]
+            self.xind = x[ind]
+            self.yind = y[ind]
+            self.zind = z[ind]
             rind = r[ind]
             
             cmapz = cm.get_cmap('viridis', np.size(z))
@@ -274,7 +285,7 @@ class Frontend(QtGui.QMainWindow):
                 
         
                 
-                rz = pg.ScatterPlotItem(rind, zind, pen=pg.mkPen(None),
+                rz = pg.ScatterPlotItem(rind, self.zind, pen=pg.mkPen(None),
                                         brush=[pg.mkBrush(v) for v in col])
                 plotrz.addItem(rz)
                
@@ -291,7 +302,7 @@ class Frontend(QtGui.QMainWindow):
                 
                 
                 
-                xz = pg.ScatterPlotItem(xind, zind, pen=pg.mkPen(None),
+                xz = pg.ScatterPlotItem(self.xind, self.zind, pen=pg.mkPen(None),
                                             brush=[pg.mkBrush(v) for v in col])
                 plotxz.addItem(xz)
                
@@ -307,7 +318,7 @@ class Frontend(QtGui.QMainWindow):
                 
         
                 
-                yz = pg.ScatterPlotItem(yind, zind, pen=pg.mkPen(None),
+                yz = pg.ScatterPlotItem(self.yind, self.zind, pen=pg.mkPen(None),
                                             brush=[pg.mkBrush(v) for v in col])
                 plotyz.addItem(yz)
                
@@ -317,8 +328,6 @@ class Frontend(QtGui.QMainWindow):
                 
             elif rz_xyz == 2:
                 
-                self.xyarray = np.column_stack((xind,yind))
-                self.xyarray = self.xyarray.astype(np.float64)
                 self.largeROI.show()
                 scatterWidgetlarge = pg.GraphicsLayoutWidget()
                 plotxylarge = scatterWidgetlarge.addPlot(title="Scatter plot large ROI (x,y)")
@@ -327,7 +336,7 @@ class Frontend(QtGui.QMainWindow):
                 
         
                 
-                self.xy = pg.ScatterPlotItem(xind, yind, pen=pg.mkPen(None),
+                self.xy = pg.ScatterPlotItem(self.xind, self.yind, pen=pg.mkPen(None),
                                             brush=[pg.mkBrush(v) for v in col])
                 plotxylarge.addItem(self.xy)
                
@@ -340,11 +349,12 @@ class Frontend(QtGui.QMainWindow):
                 ROIextent = int(npixels/3)
 
                 
-                ROIpen = pg.mkPen(color='y')
-                self.roi = pg.ROI(ROIpos, ROIextent)  
+                ROIpen = pg.mkPen(color='b')
+                self.roi = pg.ROI(ROIpos, ROIextent, pen = ROIpen)  
+                
                 self.roi.setZValue(10)
-                self.roi.addScaleRotateHandle([0, 1], [1, 1])
-                self.roi.addScaleHandle([1, 0], [1, 1])                             
+                self.roi.addScaleHandle([0, 0], [1, 1])
+                self.roi.addRotateHandle([0, 0], [1, 1])                             
                 plotxylarge.addItem(self.roi)         
                                              
             
@@ -363,22 +373,31 @@ class Frontend(QtGui.QMainWindow):
         xmax, ymax = self.roi.pos() + self.roi.size()
         
         
-        x = self.xyarray[:,0]
-        y = self.xyarray[:,1]
-        
-        
-        indx = np.where((x>xmin) & (x<xmax))
-        indy = np.where((y>ymin) & (y<ymax))
+        indx = np.where((self.xind>xmin) & (self.xind<xmax))
+        indy = np.where((self.yind>ymin) & (self.yind<ymax))
         
         mask = np.in1d(indx, indy)
         
         ind = np.nonzero(mask)
         index=indx[0][ind[0]]
         
-        xroi = x[index]
-        yroi = y[index]
+        xroi = self.xind[index]
+        yroi = self.yind[index]
+        zroi = self.zind[index]
         
-        self.selected = pg.ScatterPlotItem(xroi, yroi)     
+        if self.buttonxy.isChecked():
+            self.selected = pg.ScatterPlotItem(xroi, yroi)    
+            
+        if self.buttonxz.isChecked():
+            self.selected = pg.ScatterPlotItem(xroi, zroi)
+            
+        if self.buttonyz.isChecked():
+            self.selected = pg.ScatterPlotItem(yroi, zroi)
+        
+        else:
+            pass
+        
+        
         plotROI.addItem(self.selected)
         
         self.empty_layout(self.ui.scatterlayout_3)
@@ -388,8 +407,77 @@ class Frontend(QtGui.QMainWindow):
     def empty_layout(self, layout):
         for i in reversed(range(layout.count())): 
             layout.itemAt(i).widget().setParent(None)
+    
+        
+    def run_render(self):
+        
+        self.emit_param()
+        self.renderSignal.emit()
         
         
+    @pyqtSlot(np.ndarray)    
+    def disprender(self,B):
+           
+        
+        # renderWidget = pg.GraphicsLayoutWidget()
+        
+        # # set up axis items, scaling is performed in get_image()
+        # self.xaxis = pg.AxisItem(orientation='bottom', maxTickLength=5)
+        # self.xaxis.showLabel(show=True)
+        # self.xaxis.setLabel('x [px]')
+                
+        # self.yaxis = pg.AxisItem(orientation='left', maxTickLength=5)
+        # self.yaxis.showLabel(show=True)
+        # self.yaxis.setLabel('y [px]')
+        
+        # # image widget set-up and layout
+        # self.vb = renderWidget.addPlot(row=0, col=0, axisItems={'bottom': self.xaxis, 
+        #                                         'left': self.yaxis})
+        # img = pg.ImageItem(B)
+        # self.vb.clear()
+        # self.vb.addItem(img)
+        # self.vb.setAspectLocked(True)
+        
+        # hist = pg.HistogramLUTItem(image=img)   #set up histogram for the liveview image
+        # lut = viewbox_tools.generatePgColormap(cmaps.inferno)
+        # hist.gradient.setColorMap(lut)
+                
+        # self.empty_layout(self.ui.renderlayout)
+        # self.ui.renderlayout.addWidget(renderWidget)
+        
+        print('render done')
+        
+        imageWidget = pg.GraphicsLayoutWidget()
+        
+        # set up axis items, scaling is performed in get_image()
+        self.xaxis = pg.AxisItem(orientation='bottom', maxTickLength=5)
+        self.xaxis.showLabel(show=True)
+        self.xaxis.setLabel('x [px]')
+
+        
+        self.yaxis = pg.AxisItem(orientation='left', maxTickLength=5)
+        self.yaxis.showLabel(show=True)
+        self.yaxis.setLabel('y [px]')
+
+        # image widget set-up and layout
+        self.vb = imageWidget.addPlot(row=0, col=0, axisItems={'bottom': self.xaxis, 
+                                                 'left': self.yaxis})
+
+        img = pg.ImageItem(B)
+        self.vb.clear()
+        self.vb.addItem(img)
+        self.vb.setAspectLocked(True)
+
+        hist = pg.HistogramLUTItem(image=img)   #set up histogram for the liveview image
+        lut = viewbox_tools.generatePgColormap(cmaps.inferno)
+        hist.gradient.setColorMap(lut)
+        hist.vb.setLimits(yMin=0, yMax=10000) #TODO: check maximum value
+        for tick in hist.gradient.ticks:
+            tick.hide()
+        imageWidget.addItem(hist, row=0, col=1)
+            
+        self.empty_layout(self.ui.renderlayout)        
+        self.ui.renderlayout.addWidget(imageWidget)
     
     @pyqtSlot(np.float, np.float)    
     def dispupdateparam(self, dF, alphaF):
@@ -426,6 +514,7 @@ class Frontend(QtGui.QMainWindow):
         backend.sendupdatecalSignal.connect(self.dispupdateparam)
         backend.sendSIMPLERSignal.connect(self.scatterplot)
         backend.sendSIMPLERSignal.connect(self.dispframef)
+        backend.sendrenderSignal.connect(self.disprender)
         
 
         
@@ -438,6 +527,7 @@ class Backend(QtCore.QObject):
     paramSignal = pyqtSignal(dict)
     sendupdatecalSignal = pyqtSignal(np.float, np.float)
     sendSIMPLERSignal = pyqtSignal(np.ndarray, np.ndarray)
+    sendrenderSignal = pyqtSignal(np.ndarray)
     
         
     def __init__(self, *args, **kwargs):
@@ -466,6 +556,9 @@ class Backend(QtCore.QObject):
         self.N0 = params['N0']
         self.NA = params['NA']
         self.maxdist = params['maxdist']
+        self.mag = params['mag']
+        self.sigma_lat = params['sigmalat']
+        self.sigma_ax = params['sigmaax']
         
         
             
@@ -582,7 +675,7 @@ class Backend(QtCore.QObject):
         return xdata, ydata, frame, photon_raw, bg
 
     
-    def filter_locs(self,x, y, frame, phot_corr, max_dist):
+    def filter_locs(self, x, y, frame, phot_corr, max_dist):
          
         # Build the output array
         listLocalizations = np.column_stack((x, y, frame, phot_corr))
@@ -594,7 +687,7 @@ class Backend(QtCore.QObject):
         # (20 nm by default).
 
         min_div = 1000
-        print('filter init')
+        
         # We divide the list into sub-lists of 'min_div' locs to minimize memory usage
 
         Ntimes_min_div = int((listLocalizations[:,0].size/min_div))
@@ -648,7 +741,7 @@ class Backend(QtCore.QObject):
         
         x = x.flatten()
         y = y.flatten()
-        print('filter end')
+        
         return x,y,photons,framef
         
     def illum_correct(self, calibfilename, photon_raw, xdata, ydata):
@@ -687,7 +780,7 @@ class Backend(QtCore.QObject):
     
     @pyqtSlot()   
     def SIMPLER_function(self):
-          
+         
         xdata, ydata, frame, photon_raw, bg = self.import_file()
         
         # Convert x,y,sd values from 'camera subpixels' to nanometres
@@ -702,42 +795,43 @@ class Backend(QtCore.QObject):
                     
         else:
             phot_corr = photon_raw
-        print('end')
+        
         # Filter localizations using max dist
         max_dist = self.maxdist # Value in nanometers
                
-        x,y,photons,framef = self.filter_locs(x, y, frame, phot_corr, max_dist)
+        self.x,self.y,photons,framef = self.filter_locs(x, y, frame, phot_corr, max_dist)
         
         # Z-Calculation
-
+       
         # Small ROI and Large ROI cases
         if self.rz_xyz == 0 or self.rz_xyz == 1 or self.rz_xyz ==2:
             
             # SIMPLER z estimation
             z1 = (np.log(self.alphaF*self.N0)-np.log(photons-(1-self.alphaF)*self.N0))/(1/self.dF)
             z = np.real(z1)
-            z = z.flatten()
+            self.z = z.flatten()
             
             # Compute radial coordinate r from (x,y)   
-            P = np.polyfit(x,y,1)
+            P = np.polyfit(self.x,self.y,1)
             
             def Poly_fun(x):
                 y_polyfunc = P[0]*x + P[1]
                 return y_polyfunc
             
-            Origin_X = min(x)
+            Origin_X = 0.999999*min(self.x)
             Origin_Y = Poly_fun(Origin_X)
             
             # Change from cartesian to polar coordinates
             tita = np.arctan(P[0])
-            tita1 = np.arctan((y-Origin_Y)/(x-Origin_X))
-            r = ((x-Origin_X)**2+(y-Origin_Y)**2)**(1/2)
-            tita2 = [x - tita for x in tita1]
-            r = np.cos(tita2)*r
-                
-            simpler_output = np.column_stack((x, y, r, z, photons, framef))
+            tita1 = np.arctan((self.y-Origin_Y)/(self.x-Origin_X))
             
-            print(datetime.now(), 'end SIMPLER analysis')
+            r = ((self.x-Origin_X)**2+(self.y-Origin_Y)**2)**(1/2)
+            tita2 = [x - tita for x in tita1]
+            self.r = np.cos(tita2)*r
+            
+                       
+            simpler_output = np.column_stack((self.x, self.y, self.r, self.z, photons, framef))
+            
             self.sendSIMPLERSignal.emit(simpler_output, frame)
     
     @pyqtSlot()
@@ -838,9 +932,78 @@ class Backend(QtCore.QObject):
                 Img_bg[xind, yind] = count_div * (Img_bg[xind, yind]) + (1/Count_i) * bg[c[i]] 
             else:
                 Img_bg[xind, yind] = bg[c[i]]
+   
+    @pyqtSlot()
+    def render(self):
+        
+               
+        # define px size in the SR image (in nm)
+        self.pxsize_render = self.pxsize/self.mag
+        
+           
+        # re define origin for lateral and axial coordinates
+        self.r_ori = self.r + self.sigma_lat
+        self.z_ori = self.z + self.sigma_ax
         
 
+        # re define max
         
+        max_r = np.max(self.r) + self.sigma_lat
+        max_z = np.max(self.z) + self.sigma_ax
+        
+       
+        
+        # 
+        
+        SMr = self.r_ori/self.pxsize_render
+        SMz = self.z_ori/self.pxsize_render
+        
+        sigma_latpx = self.sigma_lat/self.pxsize_render
+        sigma_axpx = self.sigma_ax/self.pxsize_render
+
+
+        # Definition of pixels affected by the list of SM (+- 5*sigma)
+        A = np.zeros((np.int(np.ceil(max_r/self.pxsize_render)), np.int(np.ceil(max_z/self.pxsize_render))))
+
+        for i in np.arange(len(SMr)):
+            A[int(np.floor(SMr[i])), int(np.floor(SMz[i]))] = 1
+
+        
+        sigma_width_nm = np.max([self.sigma_lat, self.sigma_ax]);
+        sigma_width_px = sigma_width_nm/self.pxsize_render;
+        sd = square(int(np.round(5*sigma_width_px)));
+        # This matrix contains 1 in +- 5 sigma units around the SM positions
+        A_affected = dilation(A,sd);
+        # r and z positions affected
+        indaffected = np.where(A_affected==1)
+        raffected = indaffected[0]
+        zaffected = indaffected[1]
+        
+
+        #'PSF' is a function that calculates the value for a given position (r,z)
+        # assuming a 2D Gaussian distribution centered at (SMr(k),SMz(k))
+        def PSF(r, z, SMr, SMz, I):
+            psf = (I/(2*np.pi*sigma_latpx*sigma_axpx))*np.exp(-(((r-SMr)**2)/(2*sigma_latpx**2) + ((z-SMz)**2)/(2*sigma_axpx**2)))
+            return psf
+        
+        # B = empty matrix that will be filled with the values given by the
+        # Gaussian blur of the points listed in (SMr, SMz)
+        B = np.zeros((np.int(np.ceil(5*sigma_width_px+(max_r/self.pxsize_render))), 
+              np.int(np.ceil(5*sigma_width_px+(max_z/self.pxsize_render)))))
+        
+        # For each molecule from the list
+        for k in np.arange(len(SMr)):
+        # For each pixel of the final image with a value different from zero
+            for i in np.arange(len(raffected)): 
+                B[raffected[i],zaffected[i]] = B[raffected[i],zaffected[i]] + PSF(raffected[i],zaffected[i],SMr[k],SMz[k],1)
+                # Each 'affected' pixel (i) will take the value that had at the beggining
+                # of the k-loop + the value given by the distance to the k-molecule.
+        print(B)
+        self.sendrenderSignal.emit(B)
+        
+
+    
+    
     def fit_circle(self):
        
        pass
@@ -852,6 +1015,7 @@ class Backend(QtCore.QObject):
         frontend.updatecalSignal.connect(self.getParameters_SIMPLER)
         frontend.N0calSignal.connect(self.N0_calibration)
         frontend.runSIMPLERSignal.connect(self.SIMPLER_function)
+        frontend.renderSignal.connect(self.render)
         
         
         
