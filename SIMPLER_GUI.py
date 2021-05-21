@@ -17,28 +17,23 @@ import copy
 
 os.chdir(r'C:\Users\Lucia\Documents\NanoFísica\SIMPLER\SIMPLER-master_Python')
 
-import sys
-import time
 import ctypes
-import configparser
 import h5py as h5
 import pandas as pd
 from tkinter import Tk, filedialog
 from datetime import date, datetime
 import numpy as np
-from scipy import optimize as opt
 from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
 import circle_fit
-from skimage.morphology import square, dilation
+from skimage.morphology import square, dilation, disk
 
 
 import pyqtgraph as pg
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 from pyqtgraph.Qt import QtCore, QtGui
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
-from pyqtgraph.Point import Point
+from PyQt5.QtCore import pyqtSignal, pyqtSlot
 
 import SIMPLER_GUI_design
 import colormaps as cmaps
@@ -123,9 +118,7 @@ class Frontend(QtGui.QMainWindow):
         self.runSIMPLER = self.ui.pushButton_runSIMPLER
         self.runSIMPLER.clicked.connect(self.run_SIMPLER)
         
-        self.scatterch = self.ui.checkBox_scatter
-        self.scatterch.stateChanged.connect(self.emit_param)
-        
+       
         self.pushButton_smallROI = self.ui.pushButton_smallROI
         self.pushButton_smallROI.clicked.connect(self.updateROIPlot)
         
@@ -143,7 +136,11 @@ class Frontend(QtGui.QMainWindow):
         self.selectop.addItems(operations_list)
         self.selectop.currentIndexChanged.connect(self.emit_param)
         
-        
+        # vertical slider to control point size in scatter
+        self.slider = self.ui.verticalSlider    
+        self.slider.valueChanged.connect(self.valuechange)
+        self.pointsize = 5 
+
         
     def emit_param(self):
         
@@ -170,8 +167,7 @@ class Frontend(QtGui.QMainWindow):
         params['sigmalat'] = float(self.ui.lineEdit_sigmalat.text())
         params['sigmaax'] = float(self.ui.lineEdit_sigmaax.text())
         
-        self.scatter = self.scatterch.isChecked()
-        
+  
         
         self.paramSignal.emit(params)
        
@@ -237,19 +233,28 @@ class Frontend(QtGui.QMainWindow):
         
         self.emit_param()
         self.N0calSignal.emit()
-        print('N0 cal send')
+        
      
         
     
     def run_SIMPLER(self):
         
         self.emit_param()
+        self.updatecalSignal.emit()
         self.runSIMPLERSignal.emit()
+    
+        
+    def valuechange(self):
+        
+        self.pointsize = self.slider.value()
+        self.scatterplot(self.simpler_output)
+      
     
     @pyqtSlot(np.ndarray, np.ndarray)    
     def scatterplot(self, simpler_output):  
     
-        
+        self.simpler_output = simpler_output
+        self.scatter = True
         if self.scatter == True:
             rz_xyz = int(self.selectop.currentIndex())    
     
@@ -274,22 +279,18 @@ class Frontend(QtGui.QMainWindow):
             self.col = col
             
             if rz_xyz == 0:
-                
-                
-                
+                                
                 scatterWidget = pg.GraphicsLayoutWidget()
                 plotrz = scatterWidget.addPlot(title="Scatter plot small ROI (r,z)")
                 plotrz.setLabels(bottom=('r [nm]'), left=('z [nm]'))
                 plotrz.setAspectLocked(True)
-                
-                
-        
+                                     
                 
                 rz = pg.ScatterPlotItem(rind, self.zind, pen=pg.mkPen(None),
-                                        brush=[pg.mkBrush(v) for v in col])
+                                        brush=[pg.mkBrush(v) for v in col],
+                                        size = self.pointsize)
                 plotrz.addItem(rz)
-               
-                    
+                             
                 self.empty_layout(self.ui.scatterlayout)
                 self.ui.scatterlayout.addWidget(scatterWidget)
                 
@@ -303,7 +304,8 @@ class Frontend(QtGui.QMainWindow):
                 
                 
                 xz = pg.ScatterPlotItem(self.xind, self.zind, pen=pg.mkPen(None),
-                                            brush=[pg.mkBrush(v) for v in col])
+                                            brush=[pg.mkBrush(v) for v in col],
+                                            size = self.pointsize)
                 plotxz.addItem(xz)
                
                     
@@ -319,7 +321,8 @@ class Frontend(QtGui.QMainWindow):
         
                 
                 yz = pg.ScatterPlotItem(self.yind, self.zind, pen=pg.mkPen(None),
-                                            brush=[pg.mkBrush(v) for v in col])
+                                            brush=[pg.mkBrush(v) for v in col],
+                                            size = self.pointsize)
                 plotyz.addItem(yz)
                
                     
@@ -337,7 +340,8 @@ class Frontend(QtGui.QMainWindow):
         
                 
                 self.xy = pg.ScatterPlotItem(self.xind, self.yind, pen=pg.mkPen(None),
-                                            brush=[pg.mkBrush(v) for v in col])
+                                            brush=[pg.mkBrush(v) for v in col],
+                                            size = self.pointsize)
                 plotxylarge.addItem(self.xy)
                
                 
@@ -417,72 +421,82 @@ class Frontend(QtGui.QMainWindow):
         
     @pyqtSlot(np.ndarray)    
     def disprender(self,B):
-           
-        
-        # renderWidget = pg.GraphicsLayoutWidget()
-        
-        # # set up axis items, scaling is performed in get_image()
-        # self.xaxis = pg.AxisItem(orientation='bottom', maxTickLength=5)
-        # self.xaxis.showLabel(show=True)
-        # self.xaxis.setLabel('x [px]')
+         
+        rz_xyz = int(self.selectop.currentIndex())
                 
-        # self.yaxis = pg.AxisItem(orientation='left', maxTickLength=5)
-        # self.yaxis.showLabel(show=True)
-        # self.yaxis.setLabel('y [px]')
-        
-        # # image widget set-up and layout
-        # self.vb = renderWidget.addPlot(row=0, col=0, axisItems={'bottom': self.xaxis, 
-        #                                         'left': self.yaxis})
-        # img = pg.ImageItem(B)
-        # self.vb.clear()
-        # self.vb.addItem(img)
-        # self.vb.setAspectLocked(True)
-        
-        # hist = pg.HistogramLUTItem(image=img)   #set up histogram for the liveview image
-        # lut = viewbox_tools.generatePgColormap(cmaps.inferno)
-        # hist.gradient.setColorMap(lut)
-                
-        # self.empty_layout(self.ui.renderlayout)
-        # self.ui.renderlayout.addWidget(renderWidget)
-        
-        print('render done')
-        
-        imageWidget = pg.GraphicsLayoutWidget()
-        
-        # set up axis items, scaling is performed in get_image()
-        self.xaxis = pg.AxisItem(orientation='bottom', maxTickLength=5)
-        self.xaxis.showLabel(show=True)
-        self.xaxis.setLabel('x [px]')
-
-        
-        self.yaxis = pg.AxisItem(orientation='left', maxTickLength=5)
-        self.yaxis.showLabel(show=True)
-        self.yaxis.setLabel('y [px]')
-
-        # image widget set-up and layout
-        self.vb = imageWidget.addPlot(row=0, col=0, axisItems={'bottom': self.xaxis, 
-                                                 'left': self.yaxis})
-
-        img = pg.ImageItem(B)
-        self.vb.clear()
-        self.vb.addItem(img)
-        self.vb.setAspectLocked(True)
-
-        hist = pg.HistogramLUTItem(image=img)   #set up histogram for the liveview image
-        lut = viewbox_tools.generatePgColormap(cmaps.inferno)
-        hist.gradient.setColorMap(lut)
-        hist.vb.setLimits(yMin=0, yMax=10000) #TODO: check maximum value
-        for tick in hist.gradient.ticks:
-            tick.hide()
-        imageWidget.addItem(hist, row=0, col=1)
+        if rz_xyz == 0:
             
-        self.empty_layout(self.ui.renderlayout)        
-        self.ui.renderlayout.addWidget(imageWidget)
+            renderWidgetrz = pg.GraphicsLayoutWidget()
+          
+    
+            # image widget set-up and layout
+            vb = renderWidgetrz.addPlot(row=0, col=0)
+    
+            img = pg.ImageItem(B)
+            vb.clear()
+            vb.addItem(img)
+            # self.vb.setAspectLocked(True)
+            
+            #set up histogram for the rendered image
+            hist = pg.HistogramLUTItem(image=img)   #set up histogram for the liveview image
+            hist.vb.setLimits(yMin=0, yMax=np.max(B)) 
+            for tick in hist.gradient.ticks:
+                tick.hide()
+            renderWidgetrz.addItem(hist, row=0, col=1)
+                
+            self.empty_layout(self.ui.renderlayout)        
+            self.ui.renderlayout.addWidget(renderWidgetrz)
+            
+        elif rz_xyz == 1:
+           
+            renderWidgetxz = pg.GraphicsLayoutWidget()
+
+            
+            # image widget set-up and layout
+            vb1 = renderWidgetxz.addPlot(row=0, col=0)
+            img1 = pg.ImageItem(B[0])
+            vb1.clear()
+            vb1.addItem(img1)
+            # self.vb.setAspectLocked(True)
+            
+            #set up histogram for the rendered image
+            hist1 = pg.HistogramLUTItem(image=img1)   #set up histogram for the liveview image
+            
+            # hist1.vb1.setLimits(yMin=0, yMax=np.max(B[0])) 
+            # for tick in hist1.gradient.ticks:
+            #     tick.hide()
+            renderWidgetxz.addItem(hist1, row=0, col=1)
+
+                
+            self.empty_layout(self.ui.renderlayout)        
+            self.ui.renderlayout.addWidget(renderWidgetxz)
+            
+            
+            
+            renderWidgetyz = pg.GraphicsLayoutWidget()
+    
+            # image widget set-up and layout
+            vb2 = renderWidgetyz.addPlot(row=0, col=0)
+    
+            img2 = pg.ImageItem(B[1])
+            vb2.clear()
+            vb2.addItem(img2)
+            # self.vb.setAspectLocked(True)
+            
+            #set up histogram for the rendered image
+            hist2 = pg.HistogramLUTItem(image=img2)   #set up histogram for the liveview image
+            # hist2.vb2.setLimits(yMin=0, yMax=np.max(B[1])) 
+            # for tick in hist2.gradient.ticks:
+            #     tick.hide()
+            renderWidgetyz.addItem(hist2, row=0, col=1)
+                
+            self.empty_layout(self.ui.renderlayout_2)        
+            self.ui.renderlayout_2.addWidget(renderWidgetyz)
     
     @pyqtSlot(np.float, np.float)    
     def dispupdateparam(self, dF, alphaF):
         
-        print('dispupdatecal')      
+           
         text = 'dF=' + str(np.round(dF, decimals=2)) +\
             ' alphaF=' + str(np.round(alphaF, decimals=2)) 
         self.ui.lineEdit_updatecal.setText(text)
@@ -491,7 +505,7 @@ class Frontend(QtGui.QMainWindow):
     @pyqtSlot(np.float, np.float)    
     def dispNO(self):
         
-        print('dispN0')      
+           
         text = 'N0=' + str(np.round(N0m, decimals=2)) +\
             ' sigmaN0=' + str(np.round(sigmaN0, decimals=2)) 
         self.ui.lineEdit_updatecal.setText(text)
@@ -502,7 +516,7 @@ class Frontend(QtGui.QMainWindow):
     def dispframef(self, simpler_output, frame):
         
         framef = simpler_output[:,5]
-        print('dispframef')      
+            
         text = '# of localizations from raw data = ' + str(int(len(frame))) + '\n' +\
             ' # of valid localizations (after filter) = ' + str(int(len(framef))) 
         self.ui.textEdit_framef.setText(text)
@@ -624,7 +638,7 @@ class Backend(QtCore.QObject):
         
         self.alphaF = 1-popt[2]
         self.dF = 1/popt[1]
-        print(self.dF)
+        
         self.sendupdatecalSignal.emit(self.dF, self.alphaF)
        
     
@@ -800,39 +814,35 @@ class Backend(QtCore.QObject):
         max_dist = self.maxdist # Value in nanometers
                
         self.x,self.y,photons,framef = self.filter_locs(x, y, frame, phot_corr, max_dist)
+
+                   
+        # SIMPLER z estimation
+        z1 = (np.log(self.alphaF*self.N0)-np.log(photons-(1-self.alphaF)*self.N0))/(1/self.dF)
+        z = np.real(z1)
+        self.z = z.flatten()
         
-        # Z-Calculation
-       
-        # Small ROI and Large ROI cases
-        if self.rz_xyz == 0 or self.rz_xyz == 1 or self.rz_xyz ==2:
-            
-            # SIMPLER z estimation
-            z1 = (np.log(self.alphaF*self.N0)-np.log(photons-(1-self.alphaF)*self.N0))/(1/self.dF)
-            z = np.real(z1)
-            self.z = z.flatten()
-            
-            # Compute radial coordinate r from (x,y)   
-            P = np.polyfit(self.x,self.y,1)
-            
-            def Poly_fun(x):
-                y_polyfunc = P[0]*x + P[1]
-                return y_polyfunc
-            
-            Origin_X = 0.999999*min(self.x)
-            Origin_Y = Poly_fun(Origin_X)
-            
-            # Change from cartesian to polar coordinates
-            tita = np.arctan(P[0])
-            tita1 = np.arctan((self.y-Origin_Y)/(self.x-Origin_X))
-            
-            r = ((self.x-Origin_X)**2+(self.y-Origin_Y)**2)**(1/2)
-            tita2 = [x - tita for x in tita1]
-            self.r = np.cos(tita2)*r
-            
-                       
-            simpler_output = np.column_stack((self.x, self.y, self.r, self.z, photons, framef))
-            
-            self.sendSIMPLERSignal.emit(simpler_output, frame)
+        # Compute radial coordinate r from (x,y)   
+        P = np.polyfit(self.x,self.y,1)
+        
+        def Poly_fun(x):
+            y_polyfunc = P[0]*x + P[1]
+            return y_polyfunc
+        
+        Origin_X = 0.999999*min(self.x)
+        Origin_Y = Poly_fun(Origin_X)
+        
+        # Change from cartesian to polar coordinates
+        tita = np.arctan(P[0])
+        tita1 = np.arctan((self.y-Origin_Y)/(self.x-Origin_X))
+        
+        r = ((self.x-Origin_X)**2+(self.y-Origin_Y)**2)**(1/2)
+        tita2 = [x - tita for x in tita1]
+        self.r = np.cos(tita2)*r
+        
+                   
+        simpler_output = np.column_stack((self.x, self.y, self.r, self.z, photons, framef))
+        
+        self.sendSIMPLERSignal.emit(simpler_output, frame)
     
     @pyqtSlot()
     def N0_calibration(self):
@@ -855,7 +865,7 @@ class Backend(QtCore.QObject):
             
         # Filter localizations using max dist
         max_dist = self.maxdist # Value in nanometers
-        print(np.size(frame))       
+              
         x,y,photons,framef = self.filter_locs(x, y, frame, phot_corr, max_dist)
         
         # For the "N0 Calibration" operation, there is no "Z calculation", 
@@ -880,7 +890,8 @@ class Backend(QtCore.QObject):
         sigma0 = np.std(bin_centres)
         p0 = [A0, mu0, sigma0]
         coeff, var_matrix = curve_fit(gauss, bin_centres, hist, p0=p0)   
-        
+        N0m = coeff[1]
+        sigmaN0 = coeff[2]
         
         
         
@@ -935,43 +946,57 @@ class Backend(QtCore.QObject):
    
     @pyqtSlot()
     def render(self):
+                       
+        if self.rz_xyz == 0:
+            
+            lat = self.r
+            ax = self.z
+            B = self.gauss_render(lat,ax)
+
+            
+            
+        elif self.rz_xyz == 1:
+            
+            ax = self.z
+            lat1 = self.x
+            B1 = self.gauss_render(lat1, ax)
+            lat2 = self.y
+            B2 = self.gauss_render(lat2, ax)
+            B = ((B1,B2))
+            B = np.asarray(B)   
+
         
-               
+        self.sendrenderSignal.emit(B)
+        
+    def gauss_render(self, lat, ax):
+        
         # define px size in the SR image (in nm)
         self.pxsize_render = self.pxsize/self.mag
+        sigma_latpx = self.sigma_lat/self.pxsize_render
+        sigma_axpx = self.sigma_ax/self.pxsize_render
         
-           
         # re define origin for lateral and axial coordinates
-        self.r_ori = self.r + self.sigma_lat
-        self.z_ori = self.z + self.sigma_ax
+        self.r_ori = lat-min(lat) + self.sigma_lat
+        self.z_ori = ax-min(ax) + self.sigma_ax
         
-
         # re define max
-        
-        max_r = np.max(self.r) + self.sigma_lat
-        max_z = np.max(self.z) + self.sigma_ax
-        
+        max_r = (max(lat)-min(lat)) + self.sigma_lat
+        max_z = (max(ax)-min(ax)) + self.sigma_ax
        
-        
-        # 
-        
+
+        # from nm to px
         SMr = self.r_ori/self.pxsize_render
         SMz = self.z_ori/self.pxsize_render
         
-        sigma_latpx = self.sigma_lat/self.pxsize_render
-        sigma_axpx = self.sigma_ax/self.pxsize_render
-
-
         # Definition of pixels affected by the list of SM (+- 5*sigma)
         A = np.zeros((np.int(np.ceil(max_r/self.pxsize_render)), np.int(np.ceil(max_z/self.pxsize_render))))
 
         for i in np.arange(len(SMr)):
-            A[int(np.floor(SMr[i])), int(np.floor(SMz[i]))] = 1
-
+            A[int(np.floor(SMr[i])), int(np.floor(SMz[i]))] = 1    
         
         sigma_width_nm = np.max([self.sigma_lat, self.sigma_ax]);
         sigma_width_px = sigma_width_nm/self.pxsize_render;
-        sd = square(int(np.round(5*sigma_width_px)));
+        sd = disk(int(np.round(5*sigma_width_px)));
         # This matrix contains 1 in +- 5 sigma units around the SM positions
         A_affected = dilation(A,sd);
         # r and z positions affected
@@ -979,7 +1004,6 @@ class Backend(QtCore.QObject):
         raffected = indaffected[0]
         zaffected = indaffected[1]
         
-
         #'PSF' is a function that calculates the value for a given position (r,z)
         # assuming a 2D Gaussian distribution centered at (SMr(k),SMz(k))
         def PSF(r, z, SMr, SMz, I):
@@ -998,10 +1022,8 @@ class Backend(QtCore.QObject):
                 B[raffected[i],zaffected[i]] = B[raffected[i],zaffected[i]] + PSF(raffected[i],zaffected[i],SMr[k],SMz[k],1)
                 # Each 'affected' pixel (i) will take the value that had at the beggining
                 # of the k-loop + the value given by the distance to the k-molecule.
-        print(B)
-        self.sendrenderSignal.emit(B)
         
-
+        return B
     
     
     def fit_circle(self):

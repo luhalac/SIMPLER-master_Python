@@ -12,7 +12,7 @@ os.chdir(r'C:\Users\Lucia\Documents\NanoFísica\SIMPLER\SIMPLER-master_MATLAB\SI
 
 
 # Define filename
-filename = "example_mt.hdf5"
+filename = "example_npc.hdf5"
 
 # Read H5 file
 f = h5.File(filename, "r")
@@ -43,7 +43,7 @@ sd = (sx*2 + sy*2)**0.5
 # bg = dataset[headers[4]].values
 
 # Take x,y,sd values in camera subpixels
-camera_px = 133
+camera_px = 160
 
 # Convert x,y,sd values from 'camera subpixels' to nanometres
 xloc = x * camera_px
@@ -60,39 +60,39 @@ yloc = y * camera_px
 # with the maximum laser power intensity. This section is executed if the
 # user has chosen to perform correction due to non-flat illumination.
 
-filename_csv = 'excitation_profile_mt.csv'
+# filename_csv = 'excitation_profile_mt.csv'
 
-datacalib = pd.read_csv(filename_csv)
-profiledata = pd.DataFrame(datacalib)
-profile = profiledata.values
-# print(matplotlib.pyplot.imshow(profile))
+# datacalib = pd.read_csv(filename_csv)
+# profiledata = pd.DataFrame(datacalib)
+# profile = profiledata.values
+# # print(matplotlib.pyplot.imshow(profile))
 
-phot = photon_raw
-max_bg = np.percentile(profile, 97.5)
-phot_corr = np.zeros(photon_raw.size)
+# phot = photon_raw
+# max_bg = np.percentile(profile, 97.5)
+# phot_corr = np.zeros(photon_raw.size)
 
-# Correction loop
+# # Correction loop
 
-profx = np.size(profile,0) 
-profy = np.size(profile,1) 
+# profx = np.size(profile,0) 
+# profy = np.size(profile,1) 
 
-xdata = x
-ydata = y
+# xdata = x
+# ydata = y
 
-for i in np.arange(len(phot)):
+# for i in np.arange(len(phot)):
     
-    if int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) < profy:
-        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.ceil(ydata[i]))])
-    elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) < profy:
-        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.ceil(ydata[i]))])
-    elif int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) > profy:
-        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.floor(ydata[i]))])
-    elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) > profy:
-        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.floor(ydata[i]))])
+#     if int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) < profy:
+#         phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.ceil(ydata[i]))])
+#     elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) < profy:
+#         phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.ceil(ydata[i]))])
+#     elif int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) > profy:
+#         phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.floor(ydata[i]))])
+#     elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) > profy:
+#         phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.floor(ydata[i]))])
 
 
     
-# phot_corr = photon_raw
+phot_corr = photon_raw
         
 # Build the output array
 listLocalizations = np.column_stack((xloc, yloc, frame, phot_corr))
@@ -158,7 +158,7 @@ photons_idx = listLocalizations[idx_filtered,3].T
 #%% Z-Calculation
 
 alphaF = 0.96
-N0 = 51000
+N0 = 10000
 dF = 87.7
 photons1 = photons_idx
 

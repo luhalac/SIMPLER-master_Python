@@ -11,13 +11,13 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import os
 from matplotlib import cm
-from skimage.morphology import square, dilation
+from skimage.morphology import square, dilation, disk
 
 os.chdir(r'C:\Users\Lucia\Documents\NanoFísica\SIMPLER\SIMPLER-master_MATLAB\SIMPLER-master\Example data')
 
 
 # Define filename
-filename = "example_mt.hdf5"
+filename = "example_npc.hdf5"
 
 # Read H5 file
 f = h5.File(filename, "r")
@@ -35,7 +35,7 @@ sy = dataset['lpy']
 sd = (sx*2 + sy*2)**0.5
 
 # Take x,y,sd values in camera subpixels
-camera_px = 133
+camera_px = 160
 
 # Convert x,y,sd values from 'camera subpixels' to nanometres
 xloc = x * camera_px
@@ -102,7 +102,7 @@ photons_idx = listLocalizations[idx_filtered,3].T
 #%% Z-Calculation
 
 alphaF = 0.96
-N0 = 51000
+N0 = 10000
 dF = 87.7
 photons1 = photons_idx
 
@@ -145,7 +145,7 @@ proyec_r = np.cos(tita2)*r
 
 r = proyec_r
 
-mag=100
+mag=200
 sigma_lat=2
 sigma_ax=2   
 
@@ -153,15 +153,20 @@ sigma_ax=2
 
 # define px size in the SR image (in nm)
 pxsize_render = camera_px/mag
+r = x
+# re define origin for lateral and axial coordinates
+
+# define px size in the SR image (in nm)
+sigma_latpx = sigma_lat/pxsize_render
+sigma_axpx = sigma_ax/pxsize_render
 
 # re define origin for lateral and axial coordinates
-r_ori = r + sigma_lat
-z_ori = z + sigma_ax
+r_ori = r-min(r) + sigma_lat
+z_ori = z-min(z) + sigma_ax
 
 # re define max
-
-max_r = np.max(r) + sigma_lat
-max_z = np.max(z) + sigma_ax
+max_r = (max(r)-min(r)) + sigma_lat
+max_z = (max(z)-min(z)) + sigma_ax
 
 # 
 
@@ -180,7 +185,7 @@ for i in np.arange(len(SMr)):
 
 sigma_width_nm = np.max([sigma_lat, sigma_ax]);
 sigma_width_px = sigma_width_nm/pxsize_render;
-sd = square(int(np.round(5*sigma_width_px)));
+sd = disk(int(np.round(5*sigma_width_px)));
 # This matrix contains 1 in +- 5 sigma units around the SM positions
 A_affected = dilation(A,sd);
 # r and z positions affected
