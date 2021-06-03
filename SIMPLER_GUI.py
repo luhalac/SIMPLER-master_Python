@@ -54,6 +54,7 @@ class Frontend(QtGui.QMainWindow):
     loadfileSignal = pyqtSignal()
     loadcalibfileSignal = pyqtSignal()
     updatecalSignal = pyqtSignal()
+    finetuneSignal = pyqtSignal()
     N0calSignal = pyqtSignal()
     runSIMPLERSignal = pyqtSignal()
     renderSignal = pyqtSignal()
@@ -80,6 +81,10 @@ class Frontend(QtGui.QMainWindow):
         self.illumcorr = self.ui.checkBox_correction
         self.illumcorr.stateChanged.connect(self.emit_param)
         
+        self.fitcircle1 = self.ui.checkBox_fitcircle
+        self.illumcorr.stateChanged.connect(self.fine_tune)
+        
+        
         
         fileformat_list = ["Picasso hdf5", "ThunderStorm csv", "custom csv"]
         self.fileformat = self.ui.comboBox_fileformat
@@ -91,10 +96,7 @@ class Frontend(QtGui.QMainWindow):
         self.N0calfileformat.addItems(fileformat_list)
         self.N0calfileformat.currentIndexChanged.connect(self.emit_param)
         
-        self.incanglefileformat = self.ui.comboBox_incanglefileformat
-        self.incanglefileformat.addItems(fileformat_list)
-        self.incanglefileformat.currentIndexChanged.connect(self.emit_param)
-        
+       
         
         NA_list = ["1.42", "1.45", "1.49"]
         self.NA = self.ui.comboBox_NA
@@ -109,6 +111,9 @@ class Frontend(QtGui.QMainWindow):
         self.browsecalibfile = self.ui.pushButton_browsecalibfile
         self.browsecalibfile.clicked.connect(self.select_calibfile)
         
+        self.browsetunefile = self.ui.pushButton_browsefile_tune
+        self.browsetunefile.clicked.connect(self.select_tunefile)
+        
         self.updatecal = self.ui.pushButton_updatecal
         self.updatecal.clicked.connect(self.update_cal)
         
@@ -117,6 +122,9 @@ class Frontend(QtGui.QMainWindow):
         
         self.runSIMPLER = self.ui.pushButton_runSIMPLER
         self.runSIMPLER.clicked.connect(self.run_SIMPLER)
+        
+        self.finetune = self.ui.pushButton_tune
+        self.finetune.clicked.connect(self.fine_tune)
         
        
         self.pushButton_smallROI = self.ui.pushButton_smallROI
@@ -150,6 +158,7 @@ class Frontend(QtGui.QMainWindow):
         params['N0calfileformat'] = int(self.N0calfileformat.currentIndex())
         params['filename'] = self.ui.lineEdit_filename.text()
         params['N0calfilename'] = self.ui.lineEdit_filename_N0cal.text()
+        params['tunefilename'] = self.ui.lineEdit_filename_tune.text()
         params['calibfilename'] = self.ui.lineEdit_calibfilename.text()
         params['illumcorr'] = self.illumcorr.isChecked()
         params['rz_xyz'] = int(self.selectop.currentIndex())
@@ -157,6 +166,8 @@ class Frontend(QtGui.QMainWindow):
         params['lambdaem'] = float(self.ui.lineEdit_lambdaem.text())  
         params['angle'] = float(self.ui.lineEdit_angle.text())
         params['alpha'] = float(self.ui.lineEdit_alpha.text())
+        params['angletune'] = float(self.ui.lineEdit_angletune.text())
+        params['alphatune'] = float(self.ui.lineEdit_alphatune.text())
         params['pxsize'] = float(self.ui.lineEdit_pxsize.text())
         params['ni'] = float(self.ui.lineEdit_ni.text())
         params['ns'] = float(self.ui.lineEdit_ns.text())
@@ -207,6 +218,21 @@ class Frontend(QtGui.QMainWindow):
         if root.filenameN0cal == '':
             return
         
+    def select_tunefile(self):
+        try:
+            root = Tk()
+            root.withdraw()
+            root.filenametune = filedialog.askopenfilename(initialdir=self.initialDir,
+                                                      title = 'Select tunning file')
+            if root.filenametune != '':
+                self.ui.lineEdit_filename_tune.setText(root.filenametune)
+                
+        except OSError:
+            pass
+        
+        if root.filenameN0cal == '':
+            return
+    
     
     def select_calibfile(self):    
         try:
@@ -234,7 +260,10 @@ class Frontend(QtGui.QMainWindow):
         self.emit_param()
         self.N0calSignal.emit()
         
-     
+    def fine_tune(self):
+        
+        self.emit_param()
+        self.finetuneSignal.emit()
         
     
     def run_SIMPLER(self):
@@ -271,8 +300,6 @@ class Frontend(QtGui.QMainWindow):
             rind = r[ind]
             
             cmapz = cm.get_cmap('viridis', np.size(z))
-            
-                       
             col = cmapz.colors
             col = np.delete(col, np.s_[3], axis=1)
             col = 255*col
@@ -439,7 +466,7 @@ class Frontend(QtGui.QMainWindow):
             
             #set up histogram for the rendered image
             hist = pg.HistogramLUTItem(image=img)   #set up histogram for the liveview image
-            hist.vb.setLimits(yMin=0, yMax=np.max(B)) 
+            hist.vb.setLimits(yMin=0, yMax=np.max(B))           
             for tick in hist.gradient.ticks:
                 tick.hide()
             renderWidgetrz.addItem(hist, row=0, col=1)
@@ -450,8 +477,7 @@ class Frontend(QtGui.QMainWindow):
         elif rz_xyz == 1:
            
             renderWidgetxz = pg.GraphicsLayoutWidget()
-
-            
+        
             # image widget set-up and layout
             vb1 = renderWidgetxz.addPlot(row=0, col=0)
             img1 = pg.ImageItem(B[0])
@@ -461,23 +487,19 @@ class Frontend(QtGui.QMainWindow):
             
             #set up histogram for the rendered image
             hist1 = pg.HistogramLUTItem(image=img1)   #set up histogram for the liveview image
-            
-            # hist1.vb1.setLimits(yMin=0, yMax=np.max(B[0])) 
-            # for tick in hist1.gradient.ticks:
-            #     tick.hide()
+            hist1.vb.setLimits(yMin=0, yMax=np.max(B[0])) 
+            for tick in hist1.gradient.ticks:
+                tick.hide()
             renderWidgetxz.addItem(hist1, row=0, col=1)
 
-                
             self.empty_layout(self.ui.renderlayout)        
             self.ui.renderlayout.addWidget(renderWidgetxz)
-            
-            
+             
             
             renderWidgetyz = pg.GraphicsLayoutWidget()
     
             # image widget set-up and layout
             vb2 = renderWidgetyz.addPlot(row=0, col=0)
-    
             img2 = pg.ImageItem(B[1])
             vb2.clear()
             vb2.addItem(img2)
@@ -485,13 +507,113 @@ class Frontend(QtGui.QMainWindow):
             
             #set up histogram for the rendered image
             hist2 = pg.HistogramLUTItem(image=img2)   #set up histogram for the liveview image
-            # hist2.vb2.setLimits(yMin=0, yMax=np.max(B[1])) 
-            # for tick in hist2.gradient.ticks:
-            #     tick.hide()
+            hist2.vb.setLimits(yMin=0, yMax=np.max(B[1])) 
+            for tick in hist2.gradient.ticks:
+                tick.hide()
             renderWidgetyz.addItem(hist2, row=0, col=1)
                 
             self.empty_layout(self.ui.renderlayout_2)        
             self.ui.renderlayout_2.addWidget(renderWidgetyz)
+            
+        elif rz_xyz == 2:
+            
+            renderWidgetxy = pg.GraphicsLayoutWidget()
+          
+    
+            # image widget set-up and layout
+            vb = renderWidgetrz.addPlot(row=0, col=0)
+    
+            img = pg.ImageItem(B)
+            vb.clear()
+            vb.addItem(img)
+            # self.vb.setAspectLocked(True)
+            
+            #set up histogram for the rendered image
+            hist = pg.HistogramLUTItem(image=img)   #set up histogram for the liveview image
+            hist.vb.setLimits(yMin=0, yMax=np.max(B))           
+            for tick in hist.gradient.ticks:
+                tick.hide()
+            renderWidgetxy.addItem(hist, row=0, col=1)
+                
+            self.empty_layout(self.ui.renderlayout)        
+            self.ui.renderlayout.addWidget(renderWidgetxy)
+     
+    
+    @pyqtSlot(np.ndarray)
+    def dispfinetune(self, finetune_output):
+        
+        photons = finetune_output[:,0]
+        photons_median = finetune_output[:,1]
+        lateral = finetune_output[:,2]
+        lateral_median = finetune_output[:,3]
+        axial = finetune_output[:,4]
+        axial_median = finetune_output[:,5]
+        
+        lateralc = lateral - lateral_median
+        axialc = axial - axial_median
+        
+           
+        
+        # zmin and zmax establishes an axial range centered at the axial
+        # 'median' position, and spanning over an axial length 20% greater
+        # than the range given by (max-min)axial positions.
+        zmin = min(axialc) - 0.1*(max(axialc)-min(axialc))
+        zmax = max(axialc) + 0.1*(max(axialc)-min(axialc))
+       
+        self.fitcircle = self.fitcircle1.isChecked()
+
+        if self.fitcircle == True:
+            
+            xy = np.vstack((lateralc, axialc)).T
+            circle = circle_fit.least_squares_circle(xy)
+            xc = circle[0]
+            yc = circle[1]
+            Rc = circle[2]
+            dc = 2*Rc
+            
+            diameter = str(np.round(dc, decimals=2)) 
+            self.ui.lineEdit_D.setText(diameter)
+            
+            theta_fit = np.linspace(-np.pi, np.pi, 180)
+
+            xfit = xc + Rc*np.cos(theta_fit)
+            yfit = yc + Rc*np.sin(theta_fit)
+            
+        else:
+            
+            dc = []
+            xfit = []
+            yfit = []
+        
+        # scatter plot of aligned known structures
+        scattertuneWidget = pg.GraphicsLayoutWidget()
+        plot = scattertuneWidget.addPlot(title="Combined structures")
+        plot.setLabels(bottom=('r [nm]'), left=('z [nm]'))
+        plot.setAspectLocked(True)
+                             
+        penfit = pg.mkPen(c='#8f9805', width = 2)
+        
+        rz = pg.ScatterPlotItem((lateralc),(axialc),brush=None,pen='b',size=3)
+        circlefit = pg.PlotCurveItem(xfit, yfit, pen = penfit)
+        plot.addItem(rz)
+        plot.addItem(circlefit)
+                     
+        self.empty_layout(self.ui.tunelayout)
+        self.ui.tunelayout.addWidget(scattertuneWidget)
+        
+        # histogran of relative axial positions of known structures
+        histzrelWidget = pg.GraphicsLayoutWidget()
+        histz = histzrelWidget.addPlot(title="Relative z")
+        
+        
+        hist, bin_edges = np.histogram(axialc, bins=20)
+        widthz = np.mean(np.diff(bin_edges))
+        bincenters = np.mean(np.vstack([bin_edges[0:-1],bin_edges[1:]]), axis=0)
+        bargraph = pg.BarGraphItem(x0 = 0, y = bincenters, height = widthz, width = hist, brush ='b')
+        histz.addItem(bargraph)
+        
+        self.empty_layout(self.ui.tunelayouthist)
+        self.ui.tunelayouthist.addWidget(histzrelWidget)
     
     @pyqtSlot(np.float, np.float)    
     def dispupdateparam(self, dF, alphaF):
@@ -529,7 +651,7 @@ class Frontend(QtGui.QMainWindow):
         backend.sendSIMPLERSignal.connect(self.scatterplot)
         backend.sendSIMPLERSignal.connect(self.dispframef)
         backend.sendrenderSignal.connect(self.disprender)
-        
+        backend.sendtuneSignal.connect(self.dispfinetune)   
 
         
                 
@@ -542,7 +664,8 @@ class Backend(QtCore.QObject):
     sendupdatecalSignal = pyqtSignal(np.float, np.float)
     sendSIMPLERSignal = pyqtSignal(np.ndarray, np.ndarray)
     sendrenderSignal = pyqtSignal(np.ndarray)
-    
+    sendtuneSignal = pyqtSignal(np.ndarray)
+   
         
     def __init__(self, *args, **kwargs):
         
@@ -557,6 +680,7 @@ class Backend(QtCore.QObject):
         self.filename = params['filename']
         self.N0calfileformat = params['N0calfileformat']
         self.N0calfilename = params['N0calfilename']
+        self.tunefilename = params['tunefilename']
         self.calibfilename = params['calibfilename']
         self.rz_xyz = params['rz_xyz']
         self.illum = params['illumcorr']
@@ -564,6 +688,8 @@ class Backend(QtCore.QObject):
         self.lambdaem = params['lambdaem'] 
         self.angle = params['angle']
         self.alpha = params['alpha']
+        self.angletune = params['angletune']
+        self.alphatune = params['alphatune']  
         self.pxsize = params['pxsize']
         self.ni = params['ni']
         self.ns = params['ns']
@@ -578,7 +704,7 @@ class Backend(QtCore.QObject):
             
     @pyqtSlot()
     def getParameters_SIMPLER(self):
-                
+      
         # Angle
         if self.angle == 0:
             self.angle = np.arcsin(self.NA/self.ni)
@@ -601,7 +727,9 @@ class Backend(QtCore.QObject):
         dif = np.min(abs(lambda_em_max - np.ones(np.size(lambda_em_max))*self.lambdaem))
         i_lambda_em = np.argmin(abs(lambda_em_max - np.ones(np.size(lambda_em_max))*self.lambdaem))
     
-        
+        print(self.angle)
+        print(self.ni)
+        print(self.ns)
         # Axial dependece of the excitation field
         d = self.lambdaex/(4 * np.pi * np.sqrt(self.ni**2*(np.sin(self.angle)**2) - self.ns**2))
         I_exc = self.alpha * np.exp(-z_fit/d) + (1-self.alpha)
@@ -640,6 +768,8 @@ class Backend(QtCore.QObject):
         self.dF = 1/popt[1]
         
         self.sendupdatecalSignal.emit(self.dF, self.alphaF)
+        
+        return self.dF, self.alphaF
        
     
     def import_file(self):
@@ -814,7 +944,7 @@ class Backend(QtCore.QObject):
         max_dist = self.maxdist # Value in nanometers
                
         self.x,self.y,photons,framef = self.filter_locs(x, y, frame, phot_corr, max_dist)
-
+       
                    
         # SIMPLER z estimation
         z1 = (np.log(self.alphaF*self.N0)-np.log(photons-(1-self.alphaF)*self.N0))/(1/self.dF)
@@ -894,15 +1024,100 @@ class Backend(QtCore.QObject):
         sigmaN0 = coeff[2]
         
         
+    @pyqtSlot()    
+    def fine_tune(self):
         
-    def inc_angle_alpha(self):
         
-        #File Importation
-        xdata, ydata, frame, photon_raw, bg = self.import_file()   
+        ## Read csv file
+        filename = self.tunefilename
+        dataset = pd.read_csv(filename, header=None)
         
-        # Convert x,y,sd values from 'camera subpixels' to nanometres
-        x = xdata * self.pxsize
-        y = ydata * self.pxsize
+        # Lateral positions are obtained from odd columns
+        lateral_matrix = dataset.values[:, ::2]
+        lateral_matrix[np.where(np.isnan(lateral_matrix))]=0
+        # Axial positions are obtained from even columns
+        axial_matrix = dataset.values[:, 1::2]
+        axial_matrix[np.where(np.isnan(axial_matrix))]=0
+            
+        # reshape into vectors    
+        lateral = lateral_matrix.flatten() 
+        axial = axial_matrix.flatten()
+            
+        # The values used for the axial positions calculation of the known
+        # structures through SIMPLER are obtained from the 'run_SIMPLER'
+        # interface. It is important to set them correctly before running the
+        # operation.
+        
+        self.angle = self.angletune
+        print(self.angle)
+        self.alpha = self.alphatune    
+        [dF, alphaF] = self.getParameters_SIMPLER()
+        
+           
+        # The number of photons for each localization are retrieved from the 
+        # axial position and the dF, alphaF and N0 values obtained in the
+        # above step.
+        
+        photons_matrix = np.zeros(np.shape(axial_matrix))
+        photons_median_matrix = np.zeros(np.shape(axial_matrix))
+        lateral_median_matrix = np.zeros(np.shape(axial_matrix))
+        
+        # The next function allows to obtain a custom 'median' value, which is
+        # calculated as the mean value between the p-centile 10% and p-centile
+        # 90% from a given distribution. We use this function in order to
+        # re-center the localizations from the known structures around [0,0]
+        
+        median_perc90_10_center = lambda x: np.mean([np.percentile(x,90), np.percentile(x,10)])
+        
+        # To calculate the 'median' values, we use valid localizations, 
+        # i.e. those with axial positions different from 0;
+        # there are elements filled with z = 0 and lateral = 0 in the 'data' matrix,
+        # because not every known structures have the same number of localizations
+        
+        for i in np.arange(np.shape(lateral_matrix)[1]):
+            c = np.where(axial_matrix[:,i]!=0) 
+            photons_matrix[:,i] = self.N0*(alphaF*np.exp(-axial_matrix[:,i]/dF)
+            + 1-alphaF)
+            photons_median_matrix[:,i] = (np.ones((np.shape(photons_matrix)[0]))
+                                        *median_perc90_10_center(photons_matrix[c,i]))
+            lateral_median_matrix[:,i] = (np.ones((np.shape(lateral_matrix)[0]))
+                                        *median_perc90_10_center(lateral_matrix[c,i]))
+        
+        # Number of photons for each lozalization    
+        photons = photons_matrix.flatten()
+        # Median value of the number of photons for the structure to which
+        # each localization belongs
+        photons_median = photons_median_matrix.flatten()
+        # Lateral positions median value for the structure to which
+        # each localization belongs                                                
+        lateral_median = lateral_median_matrix.flatten()
+        # Median value of the axial position for the structure to which 
+        # each localization belongs                                            
+        axial_median = (np.log(alphaF*self.N0)-np.log(photons_median
+                        -(1-alphaF)*self.N0))/(1/dF)
+        
+        # Some elements from the axial vector are zero because the 'data' matrix
+        # contains structures with different number of localizations and thus
+        # there are columns filled with zeros. Now, we remove those elements. 
+            
+        c = np.where(axial == 0)
+        
+        photons = np.delete(photons,c) 
+        photons_median = np.delete(photons_median,c)
+        lateral_median = np.delete(lateral_median,c)
+        lateral = np.delete(lateral,c)
+        axial_median = np.delete(axial_median,c)
+        axial = np.delete(axial,c)
+        axial = dF*(np.log(alphaF)-np.log(photons/self.N0-(1-alphaF)))
+        
+        lateralc = lateral - lateral_median
+        axialc = axial - axial_median
+               
+        
+        finetune_output = np.column_stack((photons, photons_median, lateral, lateral_median, axial, axial_median))
+        self.sendtuneSignal.emit(finetune_output)
+        
+        
         
     def obtain_bg(self):
         
@@ -964,6 +1179,13 @@ class Backend(QtCore.QObject):
             B2 = self.gauss_render(lat2, ax)
             B = ((B1,B2))
             B = np.asarray(B)   
+            
+        elif self.rz_xyz == 2:
+            
+            lat = self.x
+            ax = self.y
+            B = self.gauss_render(lat,ax)
+            
 
         
         self.sendrenderSignal.emit(B)
@@ -1035,6 +1257,7 @@ class Backend(QtCore.QObject):
         
         frontend.paramSignal.connect(self.get_frontend_param)
         frontend.updatecalSignal.connect(self.getParameters_SIMPLER)
+        frontend.finetuneSignal.connect(self.fine_tune)
         frontend.N0calSignal.connect(self.N0_calibration)
         frontend.runSIMPLERSignal.connect(self.SIMPLER_function)
         frontend.renderSignal.connect(self.render)
