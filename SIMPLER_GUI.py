@@ -39,6 +39,7 @@ import SIMPLER_GUI_design
 import colormaps as cmaps
 import tools.viewbox_tools as viewbox_tools
 from matplotlib import cm
+import matplotlib.pyplot as plt
 
 
 
@@ -79,6 +80,7 @@ class Frontend(QtGui.QMainWindow):
         self.alphaF = 0.0
         
         self.illumcorr = self.ui.checkBox_correction
+        self.illumcorr = self.ui.checkBox_correction_2
         self.illumcorr.stateChanged.connect(self.emit_param)
         
         self.fitcircle1 = self.ui.checkBox_fitcircle
@@ -92,9 +94,9 @@ class Frontend(QtGui.QMainWindow):
         self.fileformat.currentIndexChanged.connect(self.emit_param)
         
         
-        self.N0calfileformat = self.ui.comboBox_N0calfileformat
-        self.N0calfileformat.addItems(fileformat_list)
-        self.N0calfileformat.currentIndexChanged.connect(self.emit_param)
+        self.N0fileformat = self.ui.comboBox_N0fileformat
+        self.N0fileformat.addItems(fileformat_list)
+        self.N0fileformat.currentIndexChanged.connect(self.emit_param)
         
        
         
@@ -105,11 +107,14 @@ class Frontend(QtGui.QMainWindow):
         self.browsefile = self.ui.pushButton_browsefile
         self.browsefile.clicked.connect(self.select_file)
         
-        self.browseN0calibfile = self.ui.pushButton_browsefile_N0cal
-        self.browseN0calibfile.clicked.connect(self.select_N0calfile)
+        self.browseN0file = self.ui.pushButton_N0browsefile
+        self.browseN0file.clicked.connect(self.select_N0file)
         
         self.browsecalibfile = self.ui.pushButton_browsecalibfile
         self.browsecalibfile.clicked.connect(self.select_calibfile)
+        
+        self.browseN0calibfile = self.ui.pushButton_N0browsecalibfile
+        self.browseN0calibfile.clicked.connect(self.select_N0calibfile)
         
         self.browsetunefile = self.ui.pushButton_browsefile_tune
         self.browsetunefile.clicked.connect(self.select_tunefile)
@@ -148,6 +153,34 @@ class Frontend(QtGui.QMainWindow):
         self.slider = self.ui.verticalSlider    
         self.slider.valueChanged.connect(self.valuechange)
         self.pointsize = 5 
+        
+        # lateral range and binning for fine tunning rel z hist
+        self.latmin = self.ui.lineEdit_latmin
+        self.latmax = self.ui.lineEdit_latmax
+        self.nbins = self.ui.lineEdit_bin
+        
+        self.latmin.textChanged.connect(self.latchange)
+        self.latmax.textChanged.connect(self.latchange)
+        self.nbins.textChanged.connect(self.latchange)
+        
+        # define colormap
+        
+        cmap = cm.get_cmap('viridis', 100)
+        colors = cmap.colors
+        colors = np.delete(colors, np.s_[3], axis=1)
+        col = 255*colors
+        self.vir = col.astype(int)
+        
+       
+        self.brush1 = pg.mkBrush(self.vir[20])
+        self.brush2 = pg.mkBrush(self.vir[40])
+        self.pen1 = pg.mkPen(self.vir[20])
+        self.pen2 = pg.mkPen(self.vir[40])
+        self.pen3 = pg.mkPen(self.vir[70],  width=2)
+        
+        self.lmin = None
+        self.lmax = None
+        self.bins = None
 
         
     def emit_param(self):
@@ -155,11 +188,12 @@ class Frontend(QtGui.QMainWindow):
         params = dict()
         
         params['fileformat'] = int(self.fileformat.currentIndex())
-        params['N0calfileformat'] = int(self.N0calfileformat.currentIndex())
+        params['N0fileformat'] = int(self.N0fileformat.currentIndex())
         params['filename'] = self.ui.lineEdit_filename.text()
-        params['N0calfilename'] = self.ui.lineEdit_filename_N0cal.text()
+        params['N0filename'] = self.ui.lineEdit_N0filename.text()
         params['tunefilename'] = self.ui.lineEdit_filename_tune.text()
         params['calibfilename'] = self.ui.lineEdit_calibfilename.text()
+        params['N0calibfilename'] = self.ui.lineEdit_N0calibfilename.text()
         params['illumcorr'] = self.illumcorr.isChecked()
         params['rz_xyz'] = int(self.selectop.currentIndex())
         params['lambdaex'] = float(self.ui.lineEdit_lambdaex.text())
@@ -182,6 +216,7 @@ class Frontend(QtGui.QMainWindow):
         
         self.paramSignal.emit(params)
        
+       
             
     
     def select_file(self):
@@ -201,7 +236,7 @@ class Frontend(QtGui.QMainWindow):
         if root.filenamedata == '':
             return
     
-    def select_N0calfile(self):
+    def select_N0file(self):
         try:
             root = Tk()
             root.withdraw()
@@ -210,7 +245,7 @@ class Frontend(QtGui.QMainWindow):
                                                       filetypes = [('hdf5 files','.hdf5'),
                                                                    ('csv file', '.csv')])
             if root.filenameN0cal != '':
-                self.ui.lineEdit_filename_N0cal.setText(root.filenameN0cal)
+                self.ui.lineEdit_N0filename.setText(root.filenameN0cal)
                 
         except OSError:
             pass
@@ -249,6 +284,21 @@ class Frontend(QtGui.QMainWindow):
         if root.filenamecalib == '':
             return
     
+    def select_N0calibfile(self):    
+        try:
+            root = Tk()
+            root.withdraw()
+            root.filenameN0calib = filedialog.askopenfilename(initialdir=self.initialDir,
+                                                      title = 'Select calibration file')
+            if root.filenameN0calib != '':
+                self.ui.lineEdit_N0calibfilename.setText(root.filenameN0calib)
+                
+        except OSError:
+            pass
+        
+        if root.filenameN0calib == '':
+            return
+    
     
     def update_cal(self):
         
@@ -277,120 +327,129 @@ class Frontend(QtGui.QMainWindow):
         
         self.pointsize = self.slider.value()
         self.scatterplot(self.simpler_output)
+        self.updateROIPlot()
+    
+    def latchange(self):
+        
+        self.bins = int(self.nbins.text())
+        self.lmin = float(self.latmin.text())
+        self.lmax = float(self.latmax.text())
+        self.dispfinetune(self.finetune_output)
       
     
     @pyqtSlot(np.ndarray, np.ndarray)    
     def scatterplot(self, simpler_output):  
     
         self.simpler_output = simpler_output
-        self.scatter = True
-        if self.scatter == True:
-            rz_xyz = int(self.selectop.currentIndex())    
-    
+
+        rz_xyz = int(self.selectop.currentIndex())    
+
+        
+        x = simpler_output[:,0]
+        y = simpler_output[:,1]
+        r = simpler_output[:,2]
+        z = simpler_output[:,3]
+        
+        ind = np.argsort(z)
+        self.xind = x[ind]
+        self.yind = y[ind]
+        self.zind = z[ind]
+        rind = r[ind]
+        
+        cmapz = cm.get_cmap('viridis', np.size(z))
+        col = cmapz.colors
+        col = np.delete(col, np.s_[3], axis=1)
+        col = 255*col
+        self.col = col
+        
+        if rz_xyz == 0:
             
-            x = simpler_output[:,0]
-            y = simpler_output[:,1]
-            r = simpler_output[:,2]
-            z = simpler_output[:,3]
+            self.largeROI.hide()                
+            scatterWidget = pg.GraphicsLayoutWidget()
+            plotrz = scatterWidget.addPlot(title="Scatter plot small ROI (r,z)")
+            plotrz.setLabels(bottom=('r [nm]'), left=('z [nm]'))
+            plotrz.setAspectLocked(True)
+                                 
             
-            ind = np.argsort(z)
-            self.xind = x[ind]
-            self.yind = y[ind]
-            self.zind = z[ind]
-            rind = r[ind]
+            rz = pg.ScatterPlotItem(rind, self.zind, pen=pg.mkPen(None),
+                                    brush=[pg.mkBrush(v) for v in col],
+                                    size = self.pointsize)
+            plotrz.addItem(rz)
+                         
+            self.empty_layout(self.ui.scatterlayout)
+            self.ui.scatterlayout.addWidget(scatterWidget)
             
-            cmapz = cm.get_cmap('viridis', np.size(z))
-            col = cmapz.colors
-            col = np.delete(col, np.s_[3], axis=1)
-            col = 255*col
-            self.col = col
+        elif rz_xyz == 1:
             
-            if rz_xyz == 0:
-                                
-                scatterWidget = pg.GraphicsLayoutWidget()
-                plotrz = scatterWidget.addPlot(title="Scatter plot small ROI (r,z)")
-                plotrz.setLabels(bottom=('r [nm]'), left=('z [nm]'))
-                plotrz.setAspectLocked(True)
-                                     
-                
-                rz = pg.ScatterPlotItem(rind, self.zind, pen=pg.mkPen(None),
+            self.largeROI.hide()
+            scatterWidgetxz = pg.GraphicsLayoutWidget()
+            plotxz = scatterWidgetxz.addPlot(title="Scatter plot small ROI (x,z)")
+            plotxz.setLabels(bottom=('x [nm]'), left=('z [nm]'))
+            plotxz.setAspectLocked(True)
+            
+            
+            
+            xz = pg.ScatterPlotItem(self.xind, self.zind, pen=pg.mkPen(None),
                                         brush=[pg.mkBrush(v) for v in col],
                                         size = self.pointsize)
-                plotrz.addItem(rz)
-                             
-                self.empty_layout(self.ui.scatterlayout)
-                self.ui.scatterlayout.addWidget(scatterWidget)
+            plotxz.addItem(xz)
+           
                 
-            elif rz_xyz == 1:
-                
-                scatterWidgetxz = pg.GraphicsLayoutWidget()
-                plotxz = scatterWidgetxz.addPlot(title="Scatter plot small ROI (x,z)")
-                plotxz.setLabels(bottom=('x [nm]'), left=('z [nm]'))
-                plotxz.setAspectLocked(True)
-                
-                
-                
-                xz = pg.ScatterPlotItem(self.xind, self.zind, pen=pg.mkPen(None),
-                                            brush=[pg.mkBrush(v) for v in col],
-                                            size = self.pointsize)
-                plotxz.addItem(xz)
-               
-                    
-                self.empty_layout(self.ui.scatterlayout)
-                self.ui.scatterlayout.addWidget(scatterWidgetxz)
-                
-                
-                scatterWidgetyz = pg.GraphicsLayoutWidget()
-                plotyz = scatterWidgetyz.addPlot(title="Scatter plot small ROI (y,z)")
-                plotyz.setLabels(bottom=('y [nm]'), left=('z [nm]'))
-                plotyz.setAspectLocked(True)
-                
-        
-                
-                yz = pg.ScatterPlotItem(self.yind, self.zind, pen=pg.mkPen(None),
-                                            brush=[pg.mkBrush(v) for v in col],
-                                            size = self.pointsize)
-                plotyz.addItem(yz)
-               
-                    
-                self.empty_layout(self.ui.scatterlayout_2)
-                self.ui.scatterlayout_2.addWidget(scatterWidgetyz)
-                
-            elif rz_xyz == 2:
-                
-                self.largeROI.show()
-                scatterWidgetlarge = pg.GraphicsLayoutWidget()
-                plotxylarge = scatterWidgetlarge.addPlot(title="Scatter plot large ROI (x,y)")
-                plotxylarge.setLabels(bottom=('x [nm]'), left=('y [nm]'))
-                plotxylarge.setAspectLocked(True)
-                
-        
-                
-                self.xy = pg.ScatterPlotItem(self.xind, self.yind, pen=pg.mkPen(None),
-                                            brush=[pg.mkBrush(v) for v in col],
-                                            size = self.pointsize)
-                plotxylarge.addItem(self.xy)
-               
-                
-                self.empty_layout(self.ui.scatterlayout)
-                self.ui.scatterlayout.addWidget(scatterWidgetlarge)
-                
-                npixels = np.size(x)
-                ROIpos = (int(min(x)), int(min(y)))
-                ROIextent = int(npixels/3)
-
-                
-                ROIpen = pg.mkPen(color='b')
-                self.roi = pg.ROI(ROIpos, ROIextent, pen = ROIpen)  
-                
-                self.roi.setZValue(10)
-                self.roi.addScaleHandle([0, 0], [1, 1])
-                self.roi.addRotateHandle([0, 0], [1, 1])                             
-                plotxylarge.addItem(self.roi)         
-                                             
+            self.empty_layout(self.ui.scatterlayout)
+            self.ui.scatterlayout.addWidget(scatterWidgetxz)
             
-            else:
-                pass
+            
+            scatterWidgetyz = pg.GraphicsLayoutWidget()
+            plotyz = scatterWidgetyz.addPlot(title="Scatter plot small ROI (y,z)")
+            plotyz.setLabels(bottom=('y [nm]'), left=('z [nm]'))
+            plotyz.setAspectLocked(True)
+            
+    
+            
+            yz = pg.ScatterPlotItem(self.yind, self.zind, pen=pg.mkPen(None),
+                                        brush=[pg.mkBrush(v) for v in col],
+                                        size = self.pointsize)
+            plotyz.addItem(yz)
+           
+                
+            self.empty_layout(self.ui.scatterlayout_2)
+            self.ui.scatterlayout_2.addWidget(scatterWidgetyz)
+            
+        elif rz_xyz == 2:
+            
+            self.empty_layout(self.ui.scatterlayout_2)
+            self.largeROI.show()
+            
+            scatterWidgetlarge = pg.GraphicsLayoutWidget()
+            plotxylarge = scatterWidgetlarge.addPlot(title="Scatter plot large ROI (x,y)")
+            plotxylarge.setLabels(bottom=('x [nm]'), left=('y [nm]'))
+            plotxylarge.setAspectLocked(True)
+            
+    
+            
+            self.xy = pg.ScatterPlotItem(self.xind, self.yind, pen=pg.mkPen(None),
+                                        brush=[pg.mkBrush(v) for v in col],
+                                        size = self.pointsize)
+            plotxylarge.addItem(self.xy)
+           
+            
+            self.empty_layout(self.ui.scatterlayout)
+            self.ui.scatterlayout.addWidget(scatterWidgetlarge)
+            
+            npixels = np.size(x)
+            ROIpos = (int(min(x)), int(min(y)))
+            ROIextent = int(npixels/3)
+
+            
+            ROIpen = pg.mkPen(color='b')
+            self.roi = pg.ROI(ROIpos, ROIextent, pen = ROIpen)  
+            
+            self.roi.setZValue(10)
+            self.roi.addScaleHandle([1, 1], [0, 0])
+            self.roi.addRotateHandle([0, 0], [1, 1])                             
+            plotxylarge.addItem(self.roi)         
+                                             
+
                 
     def updateROIPlot(self):
         
@@ -417,13 +476,16 @@ class Frontend(QtGui.QMainWindow):
         zroi = self.zind[index]
         
         if self.buttonxy.isChecked():
-            self.selected = pg.ScatterPlotItem(xroi, yroi)    
+            self.selected = pg.ScatterPlotItem(xroi, yroi, pen = self.pen1,
+                                               brush = None, size = self.pointsize)    
             
         if self.buttonxz.isChecked():
-            self.selected = pg.ScatterPlotItem(xroi, zroi)
+            self.selected = pg.ScatterPlotItem(xroi, zroi, pen=self.pen2,
+                                               brush = None, size = self.pointsize)
             
         if self.buttonyz.isChecked():
-            self.selected = pg.ScatterPlotItem(yroi, zroi)
+            self.selected = pg.ScatterPlotItem(yroi, zroi, pen=self.pen3,
+                                               brush = None, size = self.pointsize)
         
         else:
             pass
@@ -542,6 +604,8 @@ class Frontend(QtGui.QMainWindow):
     @pyqtSlot(np.ndarray)
     def dispfinetune(self, finetune_output):
         
+        self.finetune_output = finetune_output
+             
         photons = finetune_output[:,0]
         photons_median = finetune_output[:,1]
         lateral = finetune_output[:,2]
@@ -552,7 +616,6 @@ class Frontend(QtGui.QMainWindow):
         lateralc = lateral - lateral_median
         axialc = axial - axial_median
         
-           
         
         # zmin and zmax establishes an axial range centered at the axial
         # 'median' position, and spanning over an axial length 20% greater
@@ -591,9 +654,10 @@ class Frontend(QtGui.QMainWindow):
         plot.setLabels(bottom=('r [nm]'), left=('z [nm]'))
         plot.setAspectLocked(True)
                              
-        penfit = pg.mkPen(c='#8f9805', width = 2)
+        penfit = pg.mkPen(c='#8f9805', width = 2)   
         
-        rz = pg.ScatterPlotItem((lateralc),(axialc),brush=None,pen='b',size=3)
+      
+        rz = pg.ScatterPlotItem((lateralc),(axialc),brush=None,pen=self.pen1,size=3)
         circlefit = pg.PlotCurveItem(xfit, yfit, pen = penfit)
         plot.addItem(rz)
         plot.addItem(circlefit)
@@ -601,15 +665,31 @@ class Frontend(QtGui.QMainWindow):
         self.empty_layout(self.ui.tunelayout)
         self.ui.tunelayout.addWidget(scattertuneWidget)
         
-        # histogran of relative axial positions of known structures
+        # histogram of relative axial positions of known structures
         histzrelWidget = pg.GraphicsLayoutWidget()
         histz = histzrelWidget.addPlot(title="Relative z")
+               
+        print(self.lmin)
+        print(self.lmax)
         
+        if self.lmin != None:
+            
+            axialc = axialc[(lateralc>self.lmin) & (lateralc<self.lmax)]
+            print(np.size(axialc))
+            
+        else:
+            pass
         
-        hist, bin_edges = np.histogram(axialc, bins=20)
+        if self.bins != None:
+            
+            bins = self.bins
+        else:
+            bins = 20
+        
+        hist, bin_edges = np.histogram(axialc, bins=bins)
         widthz = np.mean(np.diff(bin_edges))
         bincenters = np.mean(np.vstack([bin_edges[0:-1],bin_edges[1:]]), axis=0)
-        bargraph = pg.BarGraphItem(x0 = 0, y = bincenters, height = widthz, width = hist, brush ='b')
+        bargraph = pg.BarGraphItem(x0 = 0, y = bincenters, height = widthz, width = hist, brush = self.brush1)
         histz.addItem(bargraph)
         
         self.empty_layout(self.ui.tunelayouthist)
@@ -624,13 +704,34 @@ class Frontend(QtGui.QMainWindow):
         self.ui.lineEdit_updatecal.setText(text)
         
     
-    @pyqtSlot(np.float, np.float)    
-    def dispNO(self):
+    @pyqtSlot(np.float, np.float, np.ndarray, np.ndarray)    
+    def dispN0(self, N0m, sigmaN0, photonsc, histfit):
         
-           
-        text = 'N0=' + str(np.round(N0m, decimals=2)) +\
-            ' sigmaN0=' + str(np.round(sigmaN0, decimals=2)) 
-        self.ui.lineEdit_updatecal.setText(text)
+        text = '<N0>=' + str(np.int(N0m)) +\
+            ' sigmaN0=' + str(np.int(sigmaN0))
+        
+        
+        self.ui.lineEdit_updateN0.setText(text)
+        
+        # histogram of N0 and gaussian fit
+        histN0Widget = pg.GraphicsLayoutWidget()
+        histN0 = histN0Widget.addPlot(title="N0 histogram and fit")
+        histN0.setLabels(bottom=('N0 [photons]'), left=('Counts'))
+        
+        
+        hist, bin_edges = np.histogram(photonsc, bins=40)
+        N0c = np.arange(bin_edges[0], bin_edges[-1], 100)
+     
+        fithist = pg.PlotCurveItem(N0c, histfit, pen = self.pen3)
+        
+        width = np.mean(np.diff(bin_edges))
+        bincenters = np.mean(np.vstack([bin_edges[0:-1],bin_edges[1:]]), axis=0)
+        bargraph = pg.BarGraphItem(x = bincenters, height = hist, width = width, brush = self.brush1)
+        histN0.addItem(bargraph)
+        histN0.addItem(fithist)
+        
+        self.empty_layout(self.ui.layout_N0)
+        self.ui.layout_N0.addWidget(histN0Widget)
         
         
     
@@ -648,6 +749,7 @@ class Frontend(QtGui.QMainWindow):
     def make_connection(self, backend):
         
         backend.sendupdatecalSignal.connect(self.dispupdateparam)
+        backend.sendupdateN0Signal.connect(self.dispN0)
         backend.sendSIMPLERSignal.connect(self.scatterplot)
         backend.sendSIMPLERSignal.connect(self.dispframef)
         backend.sendrenderSignal.connect(self.disprender)
@@ -662,6 +764,7 @@ class Backend(QtCore.QObject):
 
     paramSignal = pyqtSignal(dict)
     sendupdatecalSignal = pyqtSignal(np.float, np.float)
+    sendupdateN0Signal = pyqtSignal(np.float, np.float, np.ndarray, np.ndarray)
     sendSIMPLERSignal = pyqtSignal(np.ndarray, np.ndarray)
     sendrenderSignal = pyqtSignal(np.ndarray)
     sendtuneSignal = pyqtSignal(np.ndarray)
@@ -678,10 +781,11 @@ class Backend(QtCore.QObject):
         # updates parameters according to what is input in the GUI
         self.fileformat = params['fileformat']
         self.filename = params['filename']
-        self.N0calfileformat = params['N0calfileformat']
-        self.N0calfilename = params['N0calfilename']
+        self.N0fileformat = params['N0fileformat']
+        self.N0filename = params['N0filename']
         self.tunefilename = params['tunefilename']
         self.calibfilename = params['calibfilename']
+        self.N0calibfilename = params['N0calibfilename']
         self.rz_xyz = params['rz_xyz']
         self.illum = params['illumcorr']
         self.lambdaex = params['lambdaex']
@@ -726,10 +830,7 @@ class Backend(QtCore.QObject):
         lambda_em_max =[500, 530, 560, 590, 620, 670, 700, 720]
         dif = np.min(abs(lambda_em_max - np.ones(np.size(lambda_em_max))*self.lambdaem))
         i_lambda_em = np.argmin(abs(lambda_em_max - np.ones(np.size(lambda_em_max))*self.lambdaem))
-    
-        print(self.angle)
-        print(self.ni)
-        print(self.ns)
+
         # Axial dependece of the excitation field
         d = self.lambdaex/(4 * np.pi * np.sqrt(self.ni**2*(np.sin(self.angle)**2) - self.ns**2))
         I_exc = self.alpha * np.exp(-z_fit/d) + (1-self.alpha)
@@ -772,13 +873,13 @@ class Backend(QtCore.QObject):
         return self.dF, self.alphaF
        
     
-    def import_file(self):
+    def import_file(self,filename, fileformat):
         
         #File Importation
-        if self.fileformat == 0: # Importation procedure for Picasso hdf5 files.
+        if fileformat == 0: # Importation procedure for Picasso hdf5 files.
             
             # Read H5 file
-            f = h5.File(self.filename, "r")
+            f = h5.File(filename, "r")
             dataset = f['locs']
         
             # Load  input HDF5 file
@@ -790,10 +891,10 @@ class Backend(QtCore.QObject):
             ydata = dataset['y'] 
         
         
-        elif self.fileformat == 1: # Importation procedure for ThunderSTORM csv files.
+        elif fileformat == 1: # Importation procedure for ThunderSTORM csv files.
             
             ## Read ThunderSTRORM csv file
-            dataset = pd.read_csv(self.filename)
+            dataset = pd.read_csv(filename)
             # Extraxt headers names
             headers = dataset.columns.values
             
@@ -823,24 +924,22 @@ class Backend(QtCore.QObject):
          
         # Build the output array
         listLocalizations = np.column_stack((x, y, frame, phot_corr))
-             
         #REMOVING LOCS WITH NO LOCS IN i-1 AND i+1 FRAME
 
         # We keep a molecule if there is another one in the previous and next frame,
         # located at a distance < max_dist, where max_dist is introduced by user
         # (20 nm by default).
 
-        min_div = 1000
+        min_div = 10
         
         # We divide the list into sub-lists of 'min_div' locs to minimize memory usage
 
         Ntimes_min_div = int((listLocalizations[:,0].size/min_div))
-        
         truefalse_sum_roi_acum = []
         
         daa = np.zeros(listLocalizations[:,0].size)
         frame_dif = np.zeros(listLocalizations[:,0].size)
-    
+        
         for N in range(0, Ntimes_min_div+1):
             
             
@@ -872,7 +971,7 @@ class Backend(QtCore.QObject):
             # column from the 'truefalse' matrix.
        
             truefalse_sum_roi_acum = np.append(truefalse_sum_roi_acum, truefalse_sum)
-            
+           
         # We choose the indexes of those rows whose columnwise sum is > or = to 2
         idx_filtered = np.where(truefalse_sum_roi_acum > 1)
         
@@ -896,7 +995,7 @@ class Backend(QtCore.QObject):
         # with the maximum laser power intensity. This section is executed if the
         # user has chosen to perform correction due to non-flat illumination.
         
-        datacalib = pd.read_csv(self.calibfilename)
+        datacalib = pd.read_csv(calibfilename, header=None)
         profiledata = pd.DataFrame(datacalib)
         profile = profiledata.values
         
@@ -925,7 +1024,10 @@ class Backend(QtCore.QObject):
     @pyqtSlot()   
     def SIMPLER_function(self):
          
-        xdata, ydata, frame, photon_raw, bg = self.import_file()
+        
+        filename = self.filename
+        fileformat = self.fileformat
+        xdata, ydata, frame, photon_raw, bg = self.import_file(filename, fileformat)
         
         # Convert x,y,sd values from 'camera subpixels' to nanometres
         x = xdata * self.pxsize
@@ -976,39 +1078,45 @@ class Backend(QtCore.QObject):
     
     @pyqtSlot()
     def N0_calibration(self):
-     
+        
+        filename = self.N0filename
+        fileformat = self.N0fileformat
+
+
         #File Importation
-        xdata, ydata, frame, photon_raw, bg = self.import_file() 
+        xdata, ydata, frame, photon_raw, bg = self.import_file(filename, fileformat) 
         
         # Convert x,y,sd values from 'camera subpixels' to nanometres
         x = xdata * self.pxsize
         y = ydata * self.pxsize
+
         
         # Correct photon counts if illum profile not uniform 
         if self.illum == True:
-            
-            calibfilename = self.calibfilename
-            phot_corr = self.illum_correct(calibfilename, photon_raw, xdata, ydata)
-                    
+                        
+            calibfilename = self.N0calibfilename
+            phot_corr = self.illum_correct(calibfilename, photon_raw, ydata, xdata)            
+     
         else:
             phot_corr = photon_raw
-            
+        
+
         # Filter localizations using max dist
+
         max_dist = self.maxdist # Value in nanometers
-              
+          
         x,y,photons,framef = self.filter_locs(x, y, frame, phot_corr, max_dist)
         
         # For the "N0 Calibration" operation, there is no "Z calculation", 
         # because the aim of this procedure is to obtain N0 from a sample which 
         # is supposed to contain molecules located at z ~ 0.
-        xl = np.array([np.amax(x), np.amin(x)]) 
-        yl = np.array([np.amax(y), np.amin(y)]) 
         c = np.arange(0,np.size(x))
         
-        hist, bin_edges = np.histogram(photons[c], bins = 20, density = True)
+        photonsc = photons[c]
+        hist, bin_edges = np.histogram(photonsc, bins = 40, density = False)
         bin_limits = np.array([bin_edges[0], bin_edges[-1]])
         bin_centres = (bin_edges[:-1] + bin_edges[1:])/2
-    
+
         # Gaussian fit of the N0 distribution
         def gauss(x, *p):
             A, mu, sigma = p
@@ -1020,8 +1128,18 @@ class Backend(QtCore.QObject):
         sigma0 = np.std(bin_centres)
         p0 = [A0, mu0, sigma0]
         coeff, var_matrix = curve_fit(gauss, bin_centres, hist, p0=p0)   
-        N0m = coeff[1]
-        sigmaN0 = coeff[2]
+        
+        N0c = np.arange(bin_edges[0], bin_edges[-1], 100)
+        histfit = gauss(N0c, *coeff)
+        
+        self.N0m = np.round(coeff[1])
+        self.sigmaN0 = np.round(coeff[2])
+        
+        
+        
+        self.sendupdateN0Signal.emit(self.N0m, self.sigmaN0, photons, histfit)
+        
+
         
         
     @pyqtSlot()    
@@ -1049,7 +1167,6 @@ class Backend(QtCore.QObject):
         # operation.
         
         self.angle = self.angletune
-        print(self.angle)
         self.alpha = self.alphatune    
         [dF, alphaF] = self.getParameters_SIMPLER()
         

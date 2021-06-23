@@ -1,4 +1,3 @@
-#%% IMPORT HDF5 FILE
 
 import numpy as np
 import h5py as h5
@@ -214,39 +213,4 @@ rind = r[ind]
 # plt.figure()
 # plt.scatter(rind, zind, c=col)
 
-
-
-
-
-# N0 Calibration
-
-# if rz_xyz == 5:
-    # For the "N0 Calibration" operation, there is no "Z calculation", 
-    # because the aim of this procedure is to obtain N0 from a sample which 
-    # is supposed to contain molecules located at z ~ 0.
-# xl = np.array([np.amax(x_idx), np.amin(x_idx)]) 
-# yl = np.array([np.amax(y_idx), np.amin(y_idx)]) 
-# c = np.arange(0,np.size(x_idx))
-
-# hist, bin_edges = np.histogram(photons_idx[c], bins = 40, density = False)
-# bin_limits = np.array([bin_edges[0], bin_edges[-1]])
-# bin_centres = (bin_edges[:-1] + bin_edges[1:])/2
-
-# # Gaussian fit of the N0 distribution
-# def gauss(x, *p):
-#     A, mu, sigma = p
-#     return A*np.exp(-(x-mu)**2/(2.*sigma**2))
-
-# # p0 is the initial guess for the fitting coefficients (A, mu and sigma above)
-# A0 = np.max(hist)
-# mu0 = np.mean(bin_centres)
-# sigma0 = np.std(bin_centres)
-# p0 = [A0, mu0, sigma0]
-# coeff, var_matrix = curve_fit(gauss, bin_centres, hist, p0=p0)   
-
-# # Get the fitted curve
-# hist_fit = gauss(bin_centres, *coeff)
-# plt.plot(bin_centres, hist, label='Non-fit data')
-# plt.hist(photons_idx[c], bins = 40)
-# plt.plot(bin_centres, hist_fit, label='Fitted data')
-# plt.show()
+    
