@@ -478,7 +478,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>logo3.jpg</normaloff>logo3.jpg</iconset>
+         <normaloff>../../../../.designer/backup/logo3.jpg</normaloff>../../../../.designer/backup/logo3.jpg</iconset>
        </property>
        <property name="iconSize">
         <size>
@@ -980,8 +980,8 @@
        <rect>
         <x>10</x>
         <y>10</y>
-        <width>701</width>
-        <height>511</height>
+        <width>801</width>
+        <height>521</height>
        </rect>
       </property>
       <property name="title">
@@ -990,10 +990,10 @@
       <widget class="QWidget" name="verticalLayoutWidget_7">
        <property name="geometry">
         <rect>
-         <x>220</x>
+         <x>210</x>
          <y>20</y>
-         <width>221</width>
-         <height>191</height>
+         <width>231</width>
+         <height>231</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="tunelayout"/>
@@ -1188,105 +1188,198 @@
         <string>a</string>
        </property>
       </widget>
-     </widget>
-     <widget class="QGroupBox" name="groupBox_8">
-      <property name="geometry">
-       <rect>
-        <x>20</x>
-        <y>260</y>
-        <width>111</width>
-        <height>251</height>
-       </rect>
-      </property>
-      <property name="title">
-       <string>Parameters used</string>
-      </property>
-      <widget class="QLabel" name="label_23">
+      <widget class="QWidget" name="verticalLayoutWidget_9">
+       <property name="geometry">
+        <rect>
+         <x>460</x>
+         <y>290</y>
+         <width>311</width>
+         <height>211</height>
+        </rect>
+       </property>
+       <layout class="QVBoxLayout" name="zlayouthist"/>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_10">
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>20</y>
-         <width>81</width>
-         <height>16</height>
+         <y>250</y>
+         <width>441</width>
+         <height>261</height>
         </rect>
        </property>
-       <property name="text">
-        <string>Incidence angle</string>
+       <property name="title">
+        <string>Fit for different angles and alpha</string>
        </property>
+       <widget class="QLabel" name="label_22">
+        <property name="geometry">
+         <rect>
+          <x>50</x>
+          <y>30</y>
+          <width>81</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <underline>true</underline>
+         </font>
+        </property>
+        <property name="text">
+         <string>Incidence angle</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_36">
+        <property name="geometry">
+         <rect>
+          <x>70</x>
+          <y>80</y>
+          <width>21</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Symbol</family>
+          <pointsize>12</pointsize>
+          <underline>true</underline>
+         </font>
+        </property>
+        <property name="text">
+         <string>a</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="lineEdit_rangeang">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>50</y>
+          <width>51</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>4</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="lineEdit_rangealpha">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>110</y>
+          <width>51</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>0.4</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_19">
+        <property name="geometry">
+         <rect>
+          <x>30</x>
+          <y>70</y>
+          <width>47</width>
+          <height>13</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Range</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="lineEdit_stepang">
+        <property name="geometry">
+         <rect>
+          <x>100</x>
+          <y>50</y>
+          <width>51</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>0.5</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_23">
+        <property name="geometry">
+         <rect>
+          <x>110</x>
+          <y>70</y>
+          <width>47</width>
+          <height>13</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Steps</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="lineEdit_stepalpha">
+        <property name="geometry">
+         <rect>
+          <x>100</x>
+          <y>110</y>
+          <width>51</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>0.1</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_25">
+        <property name="geometry">
+         <rect>
+          <x>30</x>
+          <y>130</y>
+          <width>47</width>
+          <height>13</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Range</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_30">
+        <property name="geometry">
+         <rect>
+          <x>110</x>
+          <y>130</y>
+          <width>47</width>
+          <height>13</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Steps</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton_tune_fit">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="geometry">
+         <rect>
+          <x>60</x>
+          <y>150</y>
+          <width>51</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Run</string>
+        </property>
+       </widget>
       </widget>
-      <widget class="QLineEdit" name="lineEdit_angle_3">
+      <widget class="QWidget" name="verticalLayoutWidget_11">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>40</y>
-         <width>41</width>
-         <height>20</height>
+         <x>190</x>
+         <y>260</y>
+         <width>251</width>
+         <height>241</height>
         </rect>
        </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="readOnly">
-        <bool>true</bool>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="lineEdit_N0_2">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>80</y>
-         <width>41</width>
-         <height>20</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_25">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>60</y>
-         <width>31</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>N0</string>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="lineEdit_alpha_3">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>120</y>
-         <width>41</width>
-         <height>20</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_30">
-       <property name="geometry">
-        <rect>
-         <x>20</x>
-         <y>100</y>
-         <width>21</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <family>Symbol</family>
-         <pointsize>12</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>a</string>
-       </property>
+       <layout class="QVBoxLayout" name="tunefitlayout"/>
       </widget>
      </widget>
      <widget class="QPushButton" name="pushButton_browsefile_tune">
@@ -1330,6 +1423,117 @@
      <attribute name="title">
       <string>Calculate exc profile from bgd</string>
      </attribute>
+     <widget class="QGroupBox" name="groupBox_files_3">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>451</width>
+        <height>81</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
+      </property>
+      <property name="title">
+       <string>Load SMLM data </string>
+      </property>
+      <property name="flat">
+       <bool>false</bool>
+      </property>
+      <widget class="QComboBox" name="comboBox_bgfileformat">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>39</y>
+         <width>141</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="editable">
+        <bool>true</bool>
+       </property>
+       <property name="currentText">
+        <string>Picasso hdf5</string>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="lineEdit_bgfilename">
+       <property name="geometry">
+        <rect>
+         <x>170</x>
+         <y>40</y>
+         <width>211</width>
+         <height>20</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_37">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>18</y>
+         <width>61</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>File format</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_38">
+       <property name="geometry">
+        <rect>
+         <x>170</x>
+         <y>20</y>
+         <width>47</width>
+         <height>13</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Filename</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="pushButton_browsefilebg">
+       <property name="geometry">
+        <rect>
+         <x>390</x>
+         <y>40</y>
+         <width>51</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Browse</string>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QPushButton" name="pushButton_excprof">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>110</y>
+        <width>181</width>
+        <height>23</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Calculate excitation profile</string>
+      </property>
+     </widget>
+     <widget class="QWidget" name="verticalLayoutWidget_10">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>150</y>
+        <width>451</width>
+        <height>261</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="bgLayout"/>
+     </widget>
     </widget>
     <widget class="QWidget" name="rendertab">
      <attribute name="title">
@@ -1339,7 +1543,7 @@
       <property name="geometry">
        <rect>
         <x>190</x>
-        <y>30</y>
+        <y>20</y>
         <width>331</width>
         <height>231</height>
        </rect>
@@ -1450,7 +1654,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>render_button.png</normaloff>render_button.png</iconset>
+         <normaloff>../../../../.designer/backup/render_button.png</normaloff>../../../../.designer/backup/render_button.png</iconset>
        </property>
        <property name="iconSize">
         <size>
@@ -1464,7 +1668,7 @@
       <property name="geometry">
        <rect>
         <x>190</x>
-        <y>280</y>
+        <y>270</y>
         <width>331</width>
         <height>231</height>
        </rect>

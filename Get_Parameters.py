@@ -60,10 +60,10 @@ def getParameters_SIMPLER(lambda_exc,NA,lambda_em,angle,nS,nI,alpha):
                                  
     popt, pcov = curve_fit(fitF, z_fit, I_total, p0 = [0.9, 0.01, 0.05])
     
-        # check the goodness of fit by plotting
-    plt.plot(z_fit, I_total, 'b-', label='data')
-    plt.plot(z_fit, fitF(z_fit, *popt), 'r-',
-         label='fit: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
+    #     # check the goodness of fit by plotting
+    # plt.plot(z_fit, I_total, 'b-', label='data')
+    # plt.plot(z_fit, fitF(z_fit, *popt), 'r-',
+    #      label='fit: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
     
     alphaF = 1-popt[2]
     dF = 1/popt[1]
