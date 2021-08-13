@@ -138,7 +138,4 @@ dc = 2*Rc
 
 plotcircle = circle_fit.plot_data_circle(lateralc, axialc, xc, yc, Rc)
 
-print(alphaF)
-print(dF)
-print(dc)
 

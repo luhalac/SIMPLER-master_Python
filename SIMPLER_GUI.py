@@ -194,8 +194,8 @@ class Frontend(QtGui.QMainWindow):
         self.brush3 = pg.mkBrush(self.vir[70])
         self.pen1 = pg.mkPen(self.vir[20])
         self.pen2 = pg.mkPen(self.vir[40])
-        self.pen3 = pg.mkPen(self.vir[70],  width=2)
-        
+        self.pen3 = pg.mkPen(self.vir[70])
+      
 
 
         
@@ -756,7 +756,29 @@ class Frontend(QtGui.QMainWindow):
         
         # fit for diff angles and alpha
 
-    
+    @pyqtSlot(np.ndarray, np.ndarray, np.ndarray)
+    def fitfinetune(self, angles, alphas, D):
+        
+        # plot diameter for different parameters
+        fitplotWidget = pg.GraphicsLayoutWidget()
+        plot = fitplotWidget.addPlot(title="fine tuning")
+        plot.setLabels(bottom=('Angle [º]'), left=('D [nm]'))
+        # plot.setAspectLocked(True)
+                             
+                
+        for i in np.arange(len(alphas)):
+            Dvsang = pg.PlotCurveItem(angles, D[:,i], 
+                pen = pg.mkPen(self.vir[15*(i+1)],width = 2),
+                name = 'α ='+ str(alphas[i]))
+            plot.addItem(Dvsang)
+            plot.addLegend()
+        
+            
+                     
+        self.empty_layout(self.ui.tunefitlayout)
+        self.ui.tunefitlayout.addWidget(fitplotWidget)          
+
+
     @pyqtSlot(np.ndarray)    
     def dispbg(self, Img_bg):  
         
@@ -841,6 +863,7 @@ class Frontend(QtGui.QMainWindow):
         backend.sendSIMPLERSignal.connect(self.dispframef)
         backend.sendrenderSignal.connect(self.disprender)
         backend.sendtuneSignal.connect(self.dispfinetune)
+        backend.sendtunefitSignal.connect(self.fitfinetune)
         backend.sendbgSignal.connect(self.dispbg)
 
         
@@ -856,6 +879,7 @@ class Backend(QtCore.QObject):
     sendSIMPLERSignal = pyqtSignal(np.ndarray, np.ndarray)
     sendrenderSignal = pyqtSignal(np.ndarray)
     sendtuneSignal = pyqtSignal(np.ndarray)
+    sendtunefitSignal = pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
     sendbgSignal = pyqtSignal(np.ndarray)
    
         
@@ -1352,33 +1376,28 @@ class Backend(QtCore.QObject):
         
         alphai = self.alphatune - self.rangealpha/2
         alphaf = self.alphatune + self.rangealpha/2
+
         
-        print(alphai)
-        print(alphaf)
-        
-        angles = np.arange(angi, angf + self.stepsangle, self.stepsangle)
-        alphas = np.arange(alphai, alphaf + self.stepsalpha, self.stepsalpha)
+        angles = np.round(np.arange(angi, angf, self.stepsangle), decimals = 1)
+        alphas = np.round(np.arange(alphai, alphaf, self.stepsalpha), decimals = 1)
 
         Nang = len(angles)
         Nalp = len(alphas)
         
-        print(Nang)
         print(Nalp)
-    
-        
         D = np.zeros((Nang, Nalp))
 
+        
         for k in np.arange(Nang):
-            print(angles[k])
+            
+            
             for l in np.arange(Nalp):
-                print(alphas[l])
                 # The values used for the axial positions calculation of the known
                 # structures through SIMPLER are obtained from the 'run_SIMPLER'
                 # interface. It is important to set them correctly before running the
                 # operation.
-                
                 self.angle = angles[k]
-                self.alpha = alphas[k]  
+                self.alpha = alphas[l]  
                 
                 
                 [dF, alphaF] = self.getParameters_SIMPLER()
@@ -1433,7 +1452,6 @@ class Backend(QtCore.QObject):
                 c = np.where(axial == 0)
        
                 photonsd = np.delete(photons,c) 
-                photons_mediand = np.delete(photons_median,c)
                 lateral_mediand = np.delete(lateral_median,c)
                 laterald = np.delete(lateral,c)
                 axial_mediand = np.delete(axial_median,c)
@@ -1449,12 +1467,11 @@ class Backend(QtCore.QObject):
                 yc = circle[1]
                 Rc = circle[2]
                 dc = 2*Rc    
-                print(dc)
-                
                 D[k,l] = dc
-                
-            #     k = k+1
-            # l = l+1                
+        
+        
+        self.sendtunefitSignal.emit(angles, alphas, D)
+              
         
         
        

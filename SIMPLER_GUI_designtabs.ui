@@ -24,7 +24,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>2</number>
+     <number>4</number>
     </property>
     <widget class="QWidget" name="SIMPLER">
      <attribute name="title">
@@ -478,7 +478,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>../../../../.designer/backup/logo3.jpg</normaloff>../../../../.designer/backup/logo3.jpg</iconset>
+         <normaloff>logo3.jpg</normaloff>logo3.jpg</iconset>
        </property>
        <property name="iconSize">
         <size>
@@ -990,10 +990,10 @@
       <widget class="QWidget" name="verticalLayoutWidget_7">
        <property name="geometry">
         <rect>
-         <x>210</x>
+         <x>200</x>
          <y>20</y>
-         <width>231</width>
-         <height>231</height>
+         <width>241</width>
+         <height>221</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="tunelayout"/>
@@ -1203,9 +1203,9 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>250</y>
+         <y>240</y>
          <width>441</width>
-         <height>261</height>
+         <height>271</height>
         </rect>
        </property>
        <property name="title">
@@ -1214,7 +1214,7 @@
        <widget class="QLabel" name="label_22">
         <property name="geometry">
          <rect>
-          <x>50</x>
+          <x>20</x>
           <y>30</y>
           <width>81</width>
           <height>16</height>
@@ -1232,7 +1232,7 @@
        <widget class="QLabel" name="label_36">
         <property name="geometry">
          <rect>
-          <x>70</x>
+          <x>40</x>
           <y>80</y>
           <width>21</width>
           <height>16</height>
@@ -1252,9 +1252,9 @@
        <widget class="QLineEdit" name="lineEdit_rangeang">
         <property name="geometry">
          <rect>
-          <x>20</x>
+          <x>10</x>
           <y>50</y>
-          <width>51</width>
+          <width>31</width>
           <height>20</height>
          </rect>
         </property>
@@ -1265,9 +1265,9 @@
        <widget class="QLineEdit" name="lineEdit_rangealpha">
         <property name="geometry">
          <rect>
-          <x>20</x>
+          <x>10</x>
           <y>110</y>
-          <width>51</width>
+          <width>31</width>
           <height>20</height>
          </rect>
         </property>
@@ -1278,7 +1278,7 @@
        <widget class="QLabel" name="label_19">
         <property name="geometry">
          <rect>
-          <x>30</x>
+          <x>10</x>
           <y>70</y>
           <width>47</width>
           <height>13</height>
@@ -1291,9 +1291,9 @@
        <widget class="QLineEdit" name="lineEdit_stepang">
         <property name="geometry">
          <rect>
-          <x>100</x>
+          <x>60</x>
           <y>50</y>
-          <width>51</width>
+          <width>31</width>
           <height>20</height>
          </rect>
         </property>
@@ -1304,7 +1304,7 @@
        <widget class="QLabel" name="label_23">
         <property name="geometry">
          <rect>
-          <x>110</x>
+          <x>60</x>
           <y>70</y>
           <width>47</width>
           <height>13</height>
@@ -1317,9 +1317,9 @@
        <widget class="QLineEdit" name="lineEdit_stepalpha">
         <property name="geometry">
          <rect>
-          <x>100</x>
+          <x>60</x>
           <y>110</y>
-          <width>51</width>
+          <width>31</width>
           <height>20</height>
          </rect>
         </property>
@@ -1330,7 +1330,7 @@
        <widget class="QLabel" name="label_25">
         <property name="geometry">
          <rect>
-          <x>30</x>
+          <x>10</x>
           <y>130</y>
           <width>47</width>
           <height>13</height>
@@ -1343,7 +1343,7 @@
        <widget class="QLabel" name="label_30">
         <property name="geometry">
          <rect>
-          <x>110</x>
+          <x>60</x>
           <y>130</y>
           <width>47</width>
           <height>13</height>
@@ -1359,7 +1359,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>60</x>
+          <x>20</x>
           <y>150</y>
           <width>51</width>
           <height>31</height>
@@ -1373,9 +1373,9 @@
       <widget class="QWidget" name="verticalLayoutWidget_11">
        <property name="geometry">
         <rect>
-         <x>190</x>
+         <x>110</x>
          <y>260</y>
-         <width>251</width>
+         <width>331</width>
          <height>241</height>
         </rect>
        </property>
@@ -1654,7 +1654,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>../../../../.designer/backup/render_button.png</normaloff>../../../../.designer/backup/render_button.png</iconset>
+         <normaloff>render_button.png</normaloff>render_button.png</iconset>
        </property>
        <property name="iconSize">
         <size>
