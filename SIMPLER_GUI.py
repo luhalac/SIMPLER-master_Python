@@ -49,6 +49,7 @@ ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
 class Frontend(QtGui.QMainWindow):
     
+    # define frontend signals
     paramSignal = pyqtSignal(dict)
     loadfileSignal = pyqtSignal()
     loadcalibfileSignal = pyqtSignal()
@@ -242,9 +243,7 @@ class Frontend(QtGui.QMainWindow):
             root = Tk()
             root.withdraw()
             root.filenamedata = filedialog.askopenfilename(initialdir=self.initialDir,
-                                                      title = 'Select file',
-                                                      filetypes = [('hdf5 files','.hdf5'),
-                                                                   ('csv file', '.csv')])
+                                                      title = 'Select file')
             if root.filenamedata != '':
                 self.ui.lineEdit_filename.setText(root.filenamedata)
                 
@@ -259,9 +258,7 @@ class Frontend(QtGui.QMainWindow):
             root = Tk()
             root.withdraw()
             root.filenameN0cal = filedialog.askopenfilename(initialdir=self.initialDir,
-                                                      title = 'Select N0 calib file',
-                                                      filetypes = [('hdf5 files','.hdf5'),
-                                                                   ('csv file', '.csv')])
+                                                      title = 'Select N0 calib file')
             if root.filenameN0cal != '':
                 self.ui.lineEdit_N0filename.setText(root.filenameN0cal)
                 
@@ -276,9 +273,7 @@ class Frontend(QtGui.QMainWindow):
             root = Tk()
             root.withdraw()
             root.filenamebg = filedialog.askopenfilename(initialdir=self.initialDir,
-                                                      title = 'Select N0 calib file',
-                                                      filetypes = [('hdf5 files','.hdf5'),
-                                                                   ('csv file', '.csv')])
+                                                      title = 'Select N0 calib file')
             if root.filenamebg != '':
                 self.ui.lineEdit_bgfilename.setText(root.filenamebg)
                 
@@ -1008,7 +1003,12 @@ class Backend(QtCore.QObject):
             
             xdata = dataset['x'] 
             ydata = dataset['y'] 
-        
+            
+            # Convert x,y values from 'camera subpixels' to nanometres
+            xdata = xdata * self.pxsize
+            ydata = ydata * self.pxsize
+            
+            
         
         elif fileformat == 1: # Importation procedure for ThunderSTORM csv files.
             
@@ -1025,16 +1025,20 @@ class Backend(QtCore.QObject):
             bg = dataset[headers[4]].values
             
         else: # Importation procedure for custom csv files.
-        
-        # TODO : import custom csv file 
-            pass 
-#            full_list = csvread(filename_wformat);
-#            frame = full_list(:,1);
-#            xloc = full_list(:,2);
-#            yloc = full_list(:,3);
-#            photon_raw = full_list(:,4);
-#            if size(full_list,2)>4
-#                bg = full_list(:,5);
+
+            # Read custom csv file
+            dataset = pd.read_csv(filename)
+            # Extraxt headers names
+            headers = dataset.columns.values
+             
+            # data from different columns           
+            frame = dataset[headers[0]].values
+            xdata = dataset[headers[1]].values 
+            ydata = dataset[headers[2]].values
+            photon_raw = dataset[headers[3]].values
+            bg = dataset[headers[4]].values
+            
+
 
         return xdata, ydata, frame, photon_raw, bg
 
@@ -1148,9 +1152,8 @@ class Backend(QtCore.QObject):
         fileformat = self.fileformat
         xdata, ydata, frame, photon_raw, bg = self.import_file(filename, fileformat)
         
-        # Convert x,y,sd values from 'camera subpixels' to nanometres
-        x = xdata * self.pxsize
-        y = ydata * self.pxsize
+        x = xdata
+        y = ydata 
         
         # Correct photon counts if illum profile not uniform 
         if self.illum == True:
@@ -1160,39 +1163,39 @@ class Backend(QtCore.QObject):
                     
         else:
             phot_corr = photon_raw
-        
+        print(0)
         # Filter localizations using max dist
         max_dist = self.maxdist # Value in nanometers
-               
+        print(1)
         self.x,self.y,photons,framef = self.filter_locs(x, y, frame, phot_corr, max_dist)
-       
+        print(2)
                    
         # SIMPLER z estimation
         z1 = (np.log(self.alphaF*self.N0)-np.log(photons-(1-self.alphaF)*self.N0))/(1/self.dF)
         z = np.real(z1)
         self.z = z.flatten()
-        
+        print(3)
         # Compute radial coordinate r from (x,y)   
         P = np.polyfit(self.x,self.y,1)
-        
+        print(4)
         def Poly_fun(x):
             y_polyfunc = P[0]*x + P[1]
             return y_polyfunc
-        
+        print(5)
         Origin_X = 0.999999*min(self.x)
         Origin_Y = Poly_fun(Origin_X)
-        
+        print(6)
         # Change from cartesian to polar coordinates
         tita = np.arctan(P[0])
         tita1 = np.arctan((self.y-Origin_Y)/(self.x-Origin_X))
-        
+        print(7)
         r = ((self.x-Origin_X)**2+(self.y-Origin_Y)**2)**(1/2)
         tita2 = [x - tita for x in tita1]
         self.r = np.cos(tita2)*r
-        
+        print(4)
                    
         simpler_output = np.column_stack((self.x, self.y, self.r, self.z, photons, framef))
-        
+        print(5)
         self.sendSIMPLERSignal.emit(simpler_output, frame)
     
     @pyqtSlot()

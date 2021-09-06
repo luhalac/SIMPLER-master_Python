@@ -10,31 +10,49 @@ from matplotlib import cm
 os.chdir(r'C:\Users\Lucia\Documents\NanoFísica\SIMPLER\SIMPLER-master_MATLAB\SIMPLER-master\Example data')
 
 
+# # Define filename
+# filename = "example_mt.hdf5"
+
+# # Read H5 file
+# f = h5.File(filename, "r")
+# dataset = f['locs']
+
+# # Load  input HDF5 file
+# frame = dataset['frame']
+# photon_raw = dataset['photons']
+# bg = dataset['bg']
+
+# x = dataset['x'] 
+# y = dataset['y'] 
+# sx = dataset['lpx']
+# sy = dataset['lpy']
+# sd = (sx*2 + sy*2)**0.5
+
 # Define filename
-filename = "example_npc.hdf5"
+filename = "example_mt_Thunderstorm.csv"
+dataset = pd.read_csv(filename)
+headers = dataset.columns.values
 
-# Read H5 file
-f = h5.File(filename, "r")
-dataset = f['locs']
+## Read ThunderSTRORM csv file
 
-# Load  input HDF5 file
-frame = dataset['frame']
-photon_raw = dataset['photons']
-bg = dataset['bg']
+frame = dataset[headers[0]].values
+frame = frame.astype(int)
+x = dataset[headers[1]].values 
+y = dataset[headers[2]].values
+photon_raw = dataset[headers[3]].values
+bg = dataset[headers[4]].values
 
-x = dataset['x'] 
-y = dataset['y'] 
-sx = dataset['lpx']
-sy = dataset['lpy']
-sd = (sx*2 + sy*2)**0.5
+xloc = x
+yloc = y
+
+# Read custom csv file
 
 # Define filename
-# filename = "example_mt_Thunderstorm.csv"
+# filename = "example_mt_customformat_list.csv"
 # dataset = pd.read_csv(filename)
 # headers = dataset.columns.values
 
-# ## Read ThunderSTRORM csv file
-
+# # data from different columns           
 # frame = dataset[headers[0]].values
 # x = dataset[headers[1]].values 
 # y = dataset[headers[2]].values
@@ -42,11 +60,11 @@ sd = (sx*2 + sy*2)**0.5
 # bg = dataset[headers[4]].values
 
 # Take x,y,sd values in camera subpixels
-camera_px = 160
+# camera_px = 133
 
-# Convert x,y,sd values from 'camera subpixels' to nanometres
-xloc = x * camera_px
-yloc = y * camera_px
+# # Convert x,y,sd values from 'camera subpixels' to nanometres
+# xloc = x * camera_px
+# yloc = y * camera_px
 # sxloc = dataset['lpx'] * camera_px
 # syloc = dataset['lpy'] * camera_px
 # sdloc = (sxloc*2 + syloc*2)**0.5

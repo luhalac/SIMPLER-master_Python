@@ -24,7 +24,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>4</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="SIMPLER">
      <attribute name="title">
@@ -478,7 +478,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>logo3.jpg</normaloff>logo3.jpg</iconset>
+         <normaloff>../../../../../../.designer/backup/logo3.jpg</normaloff>../../../../../../.designer/backup/logo3.jpg</iconset>
        </property>
        <property name="iconSize">
         <size>
@@ -1654,7 +1654,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>render_button.png</normaloff>render_button.png</iconset>
+         <normaloff>../../../../../../.designer/backup/render_button.png</normaloff>../../../../../../.designer/backup/render_button.png</iconset>
        </property>
        <property name="iconSize">
         <size>
