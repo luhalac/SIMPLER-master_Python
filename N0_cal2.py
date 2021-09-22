@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Jun  8 10:58:41 2021
+Created on Mon Sep 13 12:03:01 2021
 
 @author: Lucia
 """
@@ -15,7 +15,6 @@ import time
 
 os.chdir(r'C:\Users\Lucia\Documents\NanoFísica\SIMPLER\SIMPLER-master_Python\Example data')
 
-
 # Define filename
 filename = "example_Fab.hdf5"
 
@@ -28,42 +27,39 @@ frame = dataset['frame']
 photon_raw = dataset['photons']
 bg = dataset['bg']
 
-x = dataset['x'] 
-y = dataset['y'] 
-
-# Take x,y,sd values in camera subpixels
-camera_px = 133
-
-# Convert x,y,sd values from 'camera subpixels' to nanometres
-xloc = x * camera_px
-yloc = y * camera_px
+xdata = dataset['x'] 
+ydata = dataset['y'] 
 
 
-phot_corr = photon_raw  
+pxsize = 133
+max_dist = 20
 
-        
+x = xdata * pxsize
+y = ydata * pxsize
+
+phot_corr = photon_raw
+
 # Build the output array
-listLocalizations = np.column_stack((xloc, yloc, frame, phot_corr))
-
-# REMOVING LOCS WITH NO LOCS IN i-1 AND i+1 FRAME
+listLocalizations = np.column_stack((x, y, frame, phot_corr))
+#REMOVING LOCS WITH NO LOCS IN i-1 AND i+1 FRAME
 
 # We keep a molecule if there is another one in the previous and next frame,
 # located at a distance < max_dist, where max_dist is introduced by user
 # (20 nm by default).
 
-min_div = 100.0
+min_div = 100
+
 # We divide the list into sub-lists of 'min_div' locs to minimize memory usage
 
 Ntimes_min_div = int((listLocalizations[:,0].size/min_div))
 truefalse_sum_roi_acum = []
-listLocalizations_filtered = np.zeros((int(min_div*Ntimes_min_div),listLocalizations[1,:].size))
 
-    
 daa = np.zeros(listLocalizations[:,0].size)
 frame_dif = np.zeros(listLocalizations[:,0].size)
-    
-for N in range(0, Ntimes_min_div+1):
 
+for N in range(0, Ntimes_min_div+1):
+    
+    
     min_div_N = int(min_div)
     min_range = min_div_N*N
     max_range = (min_div_N*(N+1))
@@ -73,33 +69,35 @@ for N in range(0, Ntimes_min_div+1):
         max_range = int(listLocalizations[:,0].size)
        
     truefalse = np.zeros((min_div_N,min_div_N))
+    
     # This matrix relates each localization with the rest of localizations.
     # It will take a value of 1 if the molecules i and j (i = row, j = column)
     # are located at distances < max_dist, and are detected in frames N and (N+1)
     # or (N-1). In any other case, it will take a value of 0.
 
-    max_dist = 20 # Value in nanometers
-    
+               
     for i in range(min_range, max_range):
         for j in range(min_range, max_range):
-            daa[j-min_div_N*(N)] = ((xloc[i]-xloc[j])**2+(yloc[i]-yloc[j])**2)**(1/2)
+            daa[j-min_div_N*(N)] = ((x[i]-x[j])**2+(y[i]-y[j])**2)**(1/2)
             frame_dif[j-min_div_N*(N)] = ((listLocalizations[i,2] - listLocalizations[j,2])**2)**(1/2)
             if daa[(j-min_div_N*(N))] < max_dist and frame_dif[(j-min_div_N*(N))] == 1:
                 truefalse[(i-min_range),(j-min_range)] = 1
-   
+    
     truefalse_sum = truefalse.sum(axis=0)  
     # For each row (i.e. each molecule) we calculate the sum of every
     # column from the 'truefalse' matrix.
    
     truefalse_sum_roi_acum = np.append(truefalse_sum_roi_acum, truefalse_sum)
-  
-
-idx_filtered = np.where(truefalse_sum_roi_acum > 1)
+   
 # We choose the indexes of those rows whose columnwise sum is > or = to 2
+idx_filtered = np.where(truefalse_sum_roi_acum > 1)
 
 # APPLYING FILTER TO THE ORIGINAL LIST 
 
-x_idx = listLocalizations[idx_filtered,0].T
-y_idx = listLocalizations[idx_filtered,1].T
-frame_idx = listLocalizations[idx_filtered,2].T
-photons_idx = listLocalizations[idx_filtered,3].T
+x = listLocalizations[idx_filtered,0].T
+y = listLocalizations[idx_filtered,1].T
+photons = listLocalizations[idx_filtered,3].T
+framef = listLocalizations[idx_filtered,2].T
+
+x = x.flatten()
+y = y.flatten()

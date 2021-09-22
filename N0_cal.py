@@ -80,8 +80,8 @@ for i in np.arange(len(phot)):
     elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) > profy:
         phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.floor(ydata[i]))])
     
-# phot_corr = photon_raw
-t1 = time.time()        
+
+       
 # Build the output array
 listLocalizations = np.column_stack((xloc, yloc, frame, phot_corr))
 

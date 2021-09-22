@@ -1004,9 +1004,9 @@ class Backend(QtCore.QObject):
             xdata = dataset['x'] 
             ydata = dataset['y'] 
             
-            # Convert x,y values from 'camera subpixels' to nanometres
-            xdata = xdata * self.pxsize
-            ydata = ydata * self.pxsize
+            # # Convert x,y values from 'camera subpixels' to nanometres
+            # xdata = xdata * self.pxsize
+            # ydata = ydata * self.pxsize
             
             
         
@@ -1053,7 +1053,7 @@ class Backend(QtCore.QObject):
         # located at a distance < max_dist, where max_dist is introduced by user
         # (20 nm by default).
 
-        min_div = 10
+        min_div = 100
         
         # We divide the list into sub-lists of 'min_div' locs to minimize memory usage
 
@@ -1097,7 +1097,7 @@ class Backend(QtCore.QObject):
            
         # We choose the indexes of those rows whose columnwise sum is > or = to 2
         idx_filtered = np.where(truefalse_sum_roi_acum > 1)
-        
+
         # APPLYING FILTER TO THE ORIGINAL LIST 
 
         x = listLocalizations[idx_filtered,0].T
@@ -1119,9 +1119,10 @@ class Backend(QtCore.QObject):
         # user has chosen to perform correction due to non-flat illumination.
         
         datacalib = pd.read_csv(calibfilename, header=None)
+        
         profiledata = pd.DataFrame(datacalib)
         profile = profiledata.values
-        
+    
         
         phot = photon_raw
         max_bg = np.percentile(profile, 97.5)
@@ -1130,6 +1131,7 @@ class Backend(QtCore.QObject):
         # Correction loop
         profx = np.size(profile,0) 
         profy = np.size(profile,1) 
+        
         
         for i in np.arange(len(phot)):
             if int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) < profy:
@@ -1140,6 +1142,9 @@ class Backend(QtCore.QObject):
                 phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.floor(ydata[i]))])
             elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) > profy:
                 phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.floor(ydata[i]))])
+        
+        
+        
         
         return phot_corr
                     
@@ -1152,8 +1157,10 @@ class Backend(QtCore.QObject):
         fileformat = self.fileformat
         xdata, ydata, frame, photon_raw, bg = self.import_file(filename, fileformat)
         
-        x = xdata
-        y = ydata 
+        # camera subpixels' to nanometres
+        x = xdata * self.pxsize
+        y = ydata * self.pxsize
+
         
         # Correct photon counts if illum profile not uniform 
         if self.illum == True:
@@ -1163,39 +1170,39 @@ class Backend(QtCore.QObject):
                     
         else:
             phot_corr = photon_raw
-        print(0)
+        
         # Filter localizations using max dist
         max_dist = self.maxdist # Value in nanometers
-        print(1)
+        
         self.x,self.y,photons,framef = self.filter_locs(x, y, frame, phot_corr, max_dist)
-        print(2)
+        
                    
         # SIMPLER z estimation
         z1 = (np.log(self.alphaF*self.N0)-np.log(photons-(1-self.alphaF)*self.N0))/(1/self.dF)
         z = np.real(z1)
         self.z = z.flatten()
-        print(3)
+        
         # Compute radial coordinate r from (x,y)   
         P = np.polyfit(self.x,self.y,1)
-        print(4)
+        
         def Poly_fun(x):
             y_polyfunc = P[0]*x + P[1]
             return y_polyfunc
-        print(5)
+        
         Origin_X = 0.999999*min(self.x)
         Origin_Y = Poly_fun(Origin_X)
-        print(6)
+        
         # Change from cartesian to polar coordinates
         tita = np.arctan(P[0])
         tita1 = np.arctan((self.y-Origin_Y)/(self.x-Origin_X))
-        print(7)
+        
         r = ((self.x-Origin_X)**2+(self.y-Origin_Y)**2)**(1/2)
         tita2 = [x - tita for x in tita1]
         self.r = np.cos(tita2)*r
-        print(4)
+        
                    
         simpler_output = np.column_stack((self.x, self.y, self.r, self.z, photons, framef))
-        print(5)
+        
         self.sendSIMPLERSignal.emit(simpler_output, frame)
     
     @pyqtSlot()
@@ -1206,12 +1213,12 @@ class Backend(QtCore.QObject):
 
 
         #File Importation
-        xdata, ydata, frame, photon_raw, bg = self.import_file(filename, fileformat) 
+        x, y, frame, photon_raw, bg = self.import_file(filename, fileformat) 
         
-        # Convert x,y,sd values from 'camera subpixels' to nanometres
-        x = xdata * self.pxsize
-        y = ydata * self.pxsize
-
+        # Convert x,y
+        xdata = x/self.pxsize
+        ydata = y/self.pxsize        
+        
         
         # Correct photon counts if illum profile not uniform 
         if self.illum == True:
@@ -1226,7 +1233,6 @@ class Backend(QtCore.QObject):
         # Filter localizations using max dist
 
         max_dist = self.maxdist # Value in nanometers
-          
         x,y,photons,framef = self.filter_locs(x, y, frame, phot_corr, max_dist)
         
         # For the "N0 Calibration" operation, there is no "Z calculation", 
@@ -1238,7 +1244,7 @@ class Backend(QtCore.QObject):
         hist, bin_edges = np.histogram(photonsc, bins = 40, density = False)
         bin_limits = np.array([bin_edges[0], bin_edges[-1]])
         bin_centres = (bin_edges[:-1] + bin_edges[1:])/2
-
+        
         # Gaussian fit of the N0 distribution
         def gauss(x, *p):
             A, mu, sigma = p
@@ -1250,18 +1256,12 @@ class Backend(QtCore.QObject):
         sigma0 = np.std(bin_centres)
         p0 = [A0, mu0, sigma0]
         coeff, var_matrix = curve_fit(gauss, bin_centres, hist, p0=p0)   
-        
         N0c = np.arange(bin_edges[0], bin_edges[-1], 100)
         histfit = gauss(N0c, *coeff)
-        
         self.N0m = np.round(coeff[1])
         self.sigmaN0 = np.round(coeff[2])
         
-        
-        
         self.sendupdateN0Signal.emit(self.N0m, self.sigmaN0, photons, histfit)
-        
-
         
         
     @pyqtSlot()    
@@ -1387,7 +1387,7 @@ class Backend(QtCore.QObject):
         Nang = len(angles)
         Nalp = len(alphas)
         
-        print(Nalp)
+        
         D = np.zeros((Nang, Nalp))
 
         
