@@ -1765,6 +1765,19 @@
        <string>Beam</string>
       </property>
      </widget>
+     <widget class="QSlider" name="slicesSlider">
+      <property name="geometry">
+       <rect>
+        <x>50</x>
+        <y>340</y>
+        <width>160</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+     </widget>
     </widget>
    </widget>
   </widget>

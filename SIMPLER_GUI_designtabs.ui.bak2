@@ -1676,7 +1676,7 @@
       <layout class="QVBoxLayout" name="renderlayout_2"/>
      </widget>
     </widget>
-    <widget class="QWidget" name="TIRFangle">
+    <widget class="QWidget" name="tab_3">
      <attribute name="title">
       <string>TIRF angle</string>
      </attribute>
@@ -1763,6 +1763,19 @@
       </property>
       <property name="text">
        <string>Beam</string>
+      </property>
+     </widget>
+     <widget class="QSlider" name="slicesSlider">
+      <property name="geometry">
+       <rect>
+        <x>50</x>
+        <y>340</y>
+        <width>160</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
       </property>
      </widget>
     </widget>
