@@ -22,11 +22,9 @@ from tkinter import Tk, filedialog
 import numpy as np
 from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
+import circle_fit
 from circlefit import CircleFit
 from skimage.morphology import square, dilation, disk
-from PIL import Image
-from skimage import io
-
 
 
 import pyqtgraph as pg
@@ -39,7 +37,7 @@ import SIMPLER_GUI_design
 import colormaps as cmaps
 import tools.viewbox_tools as viewbox_tools
 from matplotlib import cm
-
+import matplotlib.pyplot as plt
 
 
 
@@ -68,17 +66,16 @@ class Frontend(QtGui.QMainWindow):
 
         super().__init__(*args, **kwargs)
         
-
+        
         self.ui = SIMPLER_GUI_design.Ui_MainWindow()
         self.ui.setupUi(self)
-
         
                 
         self.initialDir = r'Desktop'
         
         self.largeROI = self.ui.groupBox_largeROI
         self.largeROI.hide()
-
+        
         
         self.dF = 0.0
         self.alphaF = 0.0
@@ -89,6 +86,7 @@ class Frontend(QtGui.QMainWindow):
         
         self.fitcircle1 = self.ui.checkBox_fitcircle
         self.illumcorr.stateChanged.connect(self.fine_tune)
+        
         
         
         fileformat_list = ["Picasso hdf5", "ThunderStorm csv", "custom csv"]
@@ -105,7 +103,7 @@ class Frontend(QtGui.QMainWindow):
         self.bgfileformat.addItems(fileformat_list)
         self.bgfileformat.currentIndexChanged.connect(self.emit_param)
        
-
+        
         NA_list = ["1.42", "1.45", "1.49"]
         self.NA = self.ui.comboBox_NA
         self.NA.addItems(NA_list)
@@ -127,12 +125,6 @@ class Frontend(QtGui.QMainWindow):
         
         self.browsetunefile = self.ui.pushButton_browsefile_tune
         self.browsetunefile.clicked.connect(self.select_tunefile)
-
-        # self.browsebeamfile = self.ui.pushButton_browsefilebeam
-        # self.browsebeamfile.clicked.connect(self.select_beamfile)
-        
-        # self.showbeam = self.ui.pushButton_stack
-        # self.showbeam.clicked.connect(self.dispbeam)
         
         self.updatecal = self.ui.pushButton_updatecal
         self.updatecal.clicked.connect(self.update_cal)
@@ -151,6 +143,7 @@ class Frontend(QtGui.QMainWindow):
         
         self.bg = self.ui.pushButton_excprof
         self.bg.clicked.connect(self.obtainbg)
+        
        
         self.pushButton_smallROI = self.ui.pushButton_smallROI
         self.pushButton_smallROI.clicked.connect(self.updateROIPlot)
@@ -186,7 +179,7 @@ class Frontend(QtGui.QMainWindow):
         self.lmin = None
         self.lmax = None
         self.bins = None
-
+        
        
         # define colormap
         
@@ -203,7 +196,7 @@ class Frontend(QtGui.QMainWindow):
         self.pen1 = pg.mkPen(self.vir[20])
         self.pen2 = pg.mkPen(self.vir[40])
         self.pen3 = pg.mkPen(self.vir[70])
-
+      
 
 
         
@@ -335,21 +328,6 @@ class Frontend(QtGui.QMainWindow):
         
         if root.filenameN0calib == '':
             return
-        
-    # def select_beamfile(self):    
-    #     try:
-    #         root = Tk()
-    #         root.withdraw()
-    #         root.filenamestack = filedialog.askopenfilename(initialdir=self.initialDir,
-    #                                                   title = 'Select stack')
-    #         if root.filenamestack != '':
-    #             self.ui.lineEdit_stackfile.setText(root.filenamestack)
-                
-    #     except OSError:
-    #         pass
-        
-    #     if root.filenamestack == '':
-    #         return
     
     
     def update_cal(self):
@@ -819,75 +797,7 @@ class Frontend(QtGui.QMainWindow):
             
         self.empty_layout(self.ui.bgLayout)        
         self.ui.bgLayout.addWidget(bgWidget)
-        
-    # def dispbeam(self):  
-        
-    # #     # filenamebeam = self.ui.lineEdit_stackfile.text()
-    # #     # Img_beamstack = io.imread(filenamebeam)    
-    # #     # Nslices = np.size(Img_beamstack,0)
-             
-    # #     # beamWidget = pg.GraphicsLayoutWidget()
-          
-    
-    # #     # # image widget set-up and layout
-    # #     # vb = beamWidget.addPlot(row=0, col=0)
-    # #     # vb.clear()
-    # #     # imv = pg.ImageView()
-    # #     # vb.addItem(imv)
-    # #     # imv.setImage(Img_beamstack)
-        
-    # #     # img = pg.ImageItem(Img_beam)
-    # #     # vb.clear()
-    # #     # vb.addItem(img)
-    # #     # # self.vb.setAspectLocked(True)
-            
-    # #     # #set up histogram for the rendered image
-    # #     # hist = pg.HistogramLUTItem(image=img)   #set up histogram for the liveview image
-    # #     # hist.vb.setLimits(yMin=0, yMax=np.max(Img_beam))           
-    # #     # for tick in hist.gradient.ticks:
-    # #     #     tick.hide()
-    # #     # beamWidget.addItem(hist, row=0, col=1)
-            
-    # #     # self.empty_layout(self.ui.stacklayout)        
-    # #     # self.ui.stacklayout.addWidget(beamWidget)
-    
-    # #     # Add image widget
-    # #     self.imv = pg.ImageView()
-        
-    #     print(1)
-    # #     # Configure slices slicer
-    # #     self.number_of_slices = self.get_number_of_slices()
-    # #     self.ui.slicesSlider.setMaximum(self.number_of_slices - 1)
-    # #     self.ui.slicesSlider.valueChanged.connect(self.imageView)
-
-    # #     self.imageView(self.ui.slicesSlider.value())
-        
-    # #     self.empty_layout(self.ui.stacklayout)        
-    # #     self.ui.stacklayout.addWidget(self.imv)
-
-    # # def get_number_of_slices(self):
-        
-    # #     filenamebeam = self.ui.lineEdit_stackfile.text()
-    # #     self.Img_beamstack = io.imread(filenamebeam)    
-    # #     Nslices = np.size(self.Img_beamstack,0)
-        
-    # #     return Nslices 
-
-
-    # # def imageView(self, slice_number):
-
-    # #     imagedata = self.get_image(slice_number)
-    # #     self.imv.setImage(imagedata)
-
-    # # def get_image(self, slice_number):
-        
-    # #     filenamebeam = self.ui.lineEdit_stackfile.text()
-    # #     self.Img_beamstack = io.imread(filenamebeam)    
-    # #     data = self.Img_beamstack[slice_number, :, :]
-
-    # #     return data
-
-
+     
     
     @pyqtSlot(np.float, np.float)    
     def dispupdateparam(self, dF, alphaF):
@@ -1733,8 +1643,10 @@ if __name__ == '__main__':
     else:
         app = QtGui.QApplication.instance()
 
+    
     icon_path = r'logo3.jpg'
     app.setWindowIcon(QtGui.QIcon(icon_path))
+    
     
     worker = Backend()    
     gui = Frontend()
@@ -1742,6 +1654,7 @@ if __name__ == '__main__':
     gui.emit_param()
     worker.make_connection(gui)
     gui.make_connection(worker)
+         
     
 
     gui.setWindowIcon(QtGui.QIcon(icon_path))

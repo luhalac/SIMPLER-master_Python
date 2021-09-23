@@ -1676,7 +1676,7 @@
       <layout class="QVBoxLayout" name="renderlayout_2"/>
      </widget>
     </widget>
-    <widget class="QWidget" name="TIRFangle">
+    <widget class="QWidget" name="tab_3">
      <attribute name="title">
       <string>TIRF angle</string>
      </attribute>
@@ -1701,7 +1701,7 @@
       <property name="flat">
        <bool>false</bool>
       </property>
-      <widget class="QLineEdit" name="lineEdit_stackfile">
+      <widget class="QLineEdit" name="lineEdit_bgfilename_3">
        <property name="geometry">
         <rect>
          <x>10</x>
@@ -1724,7 +1724,7 @@
         <string>Filename</string>
        </property>
       </widget>
-      <widget class="QPushButton" name="pushButton_browsefilebeam">
+      <widget class="QPushButton" name="pushButton_browsefilebg_3">
        <property name="geometry">
         <rect>
          <x>230</x>
@@ -1748,22 +1748,6 @@
        </rect>
       </property>
       <layout class="QVBoxLayout" name="stacklayout"/>
-     </widget>
-     <widget class="QPushButton" name="pushButton_stack">
-      <property name="enabled">
-       <bool>true</bool>
-      </property>
-      <property name="geometry">
-       <rect>
-        <x>330</x>
-        <y>40</y>
-        <width>51</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Beam</string>
-      </property>
      </widget>
     </widget>
    </widget>
