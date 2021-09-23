@@ -71,7 +71,7 @@ for i in range(0, np.size(xloc[c])):
         Img_bg[xind, yind] = bg[c[i]]
 
 Img_bg1 = Img_bg[0:np.int(np.ceil(np.max(y))),0:np.int(np.ceil(np.max(x)))]        
-# np.savetxt('fab.csv', Img_bg1, delimiter=',')
+np.savetxt('fab.csv', Img_bg1, delimiter=',')
 
 plt.figure()
 plt.scatter(x, y, marker=',', s=100)

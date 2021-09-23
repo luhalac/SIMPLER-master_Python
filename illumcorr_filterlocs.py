@@ -39,7 +39,9 @@ xloc = x * camera_px
 yloc = y * camera_px
 
 
-phot_corr = photon_raw  
+phot_corr = photon_raw
+
+t1 = time.time()        
 
         
 # Build the output array
@@ -92,7 +94,8 @@ for N in range(0, Ntimes_min_div+1):
     # column from the 'truefalse' matrix.
    
     truefalse_sum_roi_acum = np.append(truefalse_sum_roi_acum, truefalse_sum)
-  
+
+t2 = time.time()     
 
 idx_filtered = np.where(truefalse_sum_roi_acum > 1)
 # We choose the indexes of those rows whose columnwise sum is > or = to 2
