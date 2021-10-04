@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'SIMPLER_GUI_designtabs.ui'
+# Form implementation generated from reading ui file 'SIMPLER_GUI_design.ui'
 #
 # Created by: PyQt5 UI code generator 5.9.2
 #
@@ -141,7 +141,7 @@ class Ui_MainWindow(object):
         self.pushButton_runSIMPLER.setGeometry(QtCore.QRect(30, 80, 121, 91))
         self.pushButton_runSIMPLER.setText("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("../../../../../../.designer/backup/logo3.jpg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("logo3.jpg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.pushButton_runSIMPLER.setIcon(icon)
         self.pushButton_runSIMPLER.setIconSize(QtCore.QSize(100, 100))
         self.pushButton_runSIMPLER.setObjectName("pushButton_runSIMPLER")
@@ -490,7 +490,7 @@ class Ui_MainWindow(object):
         self.pushButton_render.setGeometry(QtCore.QRect(20, 170, 101, 91))
         self.pushButton_render.setText("")
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap("../../../../../../.designer/backup/render_button.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(QtGui.QPixmap("render_button.jpg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.pushButton_render.setIcon(icon1)
         self.pushButton_render.setIconSize(QtCore.QSize(80, 80))
         self.pushButton_render.setObjectName("pushButton_render")
@@ -520,16 +520,20 @@ class Ui_MainWindow(object):
         self.pushButton_browsefilebeam = QtWidgets.QPushButton(self.groupBox_files_7)
         self.pushButton_browsefilebeam.setGeometry(QtCore.QRect(230, 40, 51, 21))
         self.pushButton_browsefilebeam.setObjectName("pushButton_browsefilebeam")
-        self.verticalLayoutWidget_23 = QtWidgets.QWidget(self.TIRFangle)
-        self.verticalLayoutWidget_23.setGeometry(QtCore.QRect(10, 110, 311, 221))
-        self.verticalLayoutWidget_23.setObjectName("verticalLayoutWidget_23")
-        self.stacklayout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget_23)
-        self.stacklayout.setContentsMargins(0, 0, 0, 0)
-        self.stacklayout.setObjectName("stacklayout")
         self.pushButton_stack = QtWidgets.QPushButton(self.TIRFangle)
         self.pushButton_stack.setEnabled(True)
         self.pushButton_stack.setGeometry(QtCore.QRect(330, 40, 51, 31))
         self.pushButton_stack.setObjectName("pushButton_stack")
+        self.verticalLayoutWidget_12 = QtWidgets.QWidget(self.TIRFangle)
+        self.verticalLayoutWidget_12.setGeometry(QtCore.QRect(10, 100, 371, 241))
+        self.verticalLayoutWidget_12.setObjectName("verticalLayoutWidget_12")
+        self.beam_layout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget_12)
+        self.beam_layout.setContentsMargins(0, 0, 0, 0)
+        self.beam_layout.setObjectName("beam_layout")
+        self.slicesSlider = QtWidgets.QSlider(self.TIRFangle)
+        self.slicesSlider.setGeometry(QtCore.QRect(20, 350, 160, 22))
+        self.slicesSlider.setOrientation(QtCore.Qt.Horizontal)
+        self.slicesSlider.setObjectName("slicesSlider")
         self.tabWidget.addTab(self.TIRFangle, "")
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)

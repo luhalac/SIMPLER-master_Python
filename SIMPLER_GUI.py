@@ -7,7 +7,7 @@ Created on Tue Nov 21 14:05:18 2019
 GUI for SIMPLER analysis 
 
 conda command for converting QtDesigner file to .py:
-pyuic5 -x SIMPLER_GUI_designtabs.ui -o SIMPLER_GUI_design.py
+pyuic5 -x SIMPLER_GUI_design.ui -o SIMPLER_GUI_design.py
     
 """
 
@@ -16,15 +16,15 @@ import os
 os.chdir(r'C:\Users\Lucia\Documents\NanoFísica\SIMPLER\SIMPLER-master_Python')
 
 import ctypes
+from skimage import io
 import h5py as h5
 import pandas as pd
 from tkinter import Tk, filedialog
 import numpy as np
 from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
-import circle_fit
 from circlefit import CircleFit
-from skimage.morphology import square, dilation, disk
+
 
 
 import pyqtgraph as pg
@@ -34,10 +34,7 @@ from pyqtgraph.Qt import QtCore, QtGui
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 
 import SIMPLER_GUI_design
-import colormaps as cmaps
-import tools.viewbox_tools as viewbox_tools
 from matplotlib import cm
-import matplotlib.pyplot as plt
 
 
 
@@ -180,6 +177,13 @@ class Frontend(QtGui.QMainWindow):
         self.lmax = None
         self.bins = None
         
+        # beam displacement and TIRF angle cal
+        
+        self.browsebeamfile = self.ui.pushButton_browsefilebeam
+        self.browsebeamfile.clicked.connect(self.select_beamfile)
+        
+        self.showbeam = self.ui.pushButton_stack
+        self.showbeam.clicked.connect(self.dispbeam)
        
         # define colormap
         
@@ -329,6 +333,20 @@ class Frontend(QtGui.QMainWindow):
         if root.filenameN0calib == '':
             return
     
+    def select_beamfile(self):    
+        try:
+            root = Tk()
+            root.withdraw()
+            root.filenamestack = filedialog.askopenfilename(initialdir=self.initialDir,
+                                                      title = 'Select stack')
+            if root.filenamestack != '':
+                self.ui.lineEdit_stackfile.setText(root.filenamestack)
+                
+        except OSError:
+            pass
+        
+        if root.filenamestack == '':
+            return
     
     def update_cal(self):
         
@@ -773,6 +791,50 @@ class Frontend(QtGui.QMainWindow):
         self.empty_layout(self.ui.tunefitlayout)
         self.ui.tunefitlayout.addWidget(fitplotWidget)          
 
+
+
+
+
+
+    def dispbeam(self):  
+        
+        # Add image widget
+        self.imv = pg.ImageView()
+        
+        
+         # Configure slices slicer
+        self.number_of_slices = self.get_number_of_slices()
+        self.ui.slicesSlider.setMaximum(self.number_of_slices - 1)
+        self.ui.slicesSlider.valueChanged.connect(self.imageView)
+
+        self.imageView(self.ui.slicesSlider.value())
+        
+        self.empty_layout(self.ui.beam_layout)        
+        self.ui.beam_layout.addWidget(self.imv)
+
+    def get_number_of_slices(self):
+        
+        filenamebeam = self.ui.lineEdit_stackfile.text()
+        self.Img_beamstack = io.imread(filenamebeam)    
+        Nslices = np.size(self.Img_beamstack,0)
+        
+        return Nslices 
+
+
+    def imageView(self, slice_number):
+
+        imagedata = self.get_image(slice_number)
+        self.imv.setImage(imagedata)
+        
+        
+
+    def get_image(self, slice_number):
+        
+        filenamebeam = self.ui.lineEdit_stackfile.text()
+        self.Img_beamstack = io.imread(filenamebeam)    
+        data = self.Img_beamstack[slice_number, :, :]
+    
+        return data
 
     @pyqtSlot(np.ndarray)    
     def dispbg(self, Img_bg):  
@@ -1661,4 +1723,4 @@ if __name__ == '__main__':
     gui.show() #Maximized()
     #gui.showFullScreen()
         
-    # app.exec_()     
+    app.exec_()     
