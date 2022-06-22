@@ -12,11 +12,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 
-os.chdir(r'C:\Users\Lucia\Documents\NanoFísica\SIMPLER\SIMPLER-master_Python\Example data')
+os.chdir(r'C:\Users\Lucia\Documents\Lu Lopez\SIMPLER\2 color SIMPLER\N0cal\220407-fabs')
 
 
 # Define filename
-filename = "example_Fab.hdf5"
+filename = "568_1en100_EM30_50mW_locs_filter.hdf5"
 
 # Read H5 file
 f = h5.File(filename, "r")
@@ -71,8 +71,8 @@ for i in range(0, np.size(xloc[c])):
         Img_bg[xind, yind] = bg[c[i]]
 
 Img_bg1 = Img_bg[0:np.int(np.ceil(np.max(y))),0:np.int(np.ceil(np.max(x)))]        
-np.savetxt('fab.csv', Img_bg1, delimiter=',')
+#np.savetxt('fabgonza.csv', Img_bg1, delimiter=',')
 
 plt.figure()
-plt.scatter(x, y, marker=',', s=100)
-plt.imshow(Img_bg1, cmap='binary')
+#plt.scatter(x, y, marker=',', s=20)
+plt.imshow(Img_bg1, cmap='viridis')

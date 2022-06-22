@@ -13,7 +13,7 @@ import os
 from matplotlib import cm
 import time
 
-os.chdir(r'C:\Users\Lucia\Documents\NanoFísica\SIMPLER\SIMPLER-master_Python\Example data')
+os.chdir(r'C:\Users\Lucia\Documents\GitHub\SIMPLER-master_Python\Example data')
 
 t0 = time.time()
 # Define filename
@@ -48,40 +48,40 @@ yloc = y * camera_px
 # converted to the value they would have if the whole image was illuminated
 # with the maximum laser power intensity. This section is executed if the
 # user has chosen to perform correction due to non-flat illumination.
-
+#
 filename_csv = 'fab.csv'
-
+#
 datacalib = pd.read_csv(filename_csv, header=None)
 profiledata = pd.DataFrame(datacalib)
 profile = profiledata.values
-
-
+#
+#
 phot = photon_raw
 max_bg = np.percentile(profile, 97.5)
 phot_corr = np.zeros(photon_raw.size)
-
-
-# Correction loop
-
-profx = np.size(profile,0) 
-profy = np.size(profile,1) 
-
-xdata = y
-ydata = x
-
+#
+#
+## Correction loop
+#
+profx = np.size(profile,1) 
+profy = np.size(profile,0) 
+#
+xdata = x
+ydata = y
+#
 for i in np.arange(len(phot)):
     
     if int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) < profy:
-        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.ceil(ydata[i]))])
+        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(ydata[i])),int(np.ceil(xdata[i]))])
     elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) < profy:
-        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.ceil(ydata[i]))])
+        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(ydata[i])),int(np.ceil(xdata[i]))])
     elif int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) > profy:
-        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.floor(ydata[i]))])
+        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(ydata[i])),int(np.floor(xdata[i]))])
     elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) > profy:
-        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.floor(ydata[i]))])
+        phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(ydata[i])),int(np.floor(xdata[i]))])
     
 # phot_corr = photon_raw
-t1 = time.time()        
+#t1 = time.time()        
 # Build the output array
 listLocalizations = np.column_stack((xloc, yloc, frame, phot_corr))
 
@@ -90,8 +90,8 @@ listLocalizations = np.column_stack((xloc, yloc, frame, phot_corr))
 # We keep a molecule if there is another one in the previous and next frame,
 # located at a distance < max_dist, where max_dist is introduced by user
 # (20 nm by default).
-
-min_div = 100.0
+    
+min_div = 1000.0
 # We divide the list into sub-lists of 'min_div' locs to minimize memory usage
 
 Ntimes_min_div = int((listLocalizations[:,0].size/min_div))
@@ -103,7 +103,7 @@ daa = np.zeros(listLocalizations[:,0].size)
 frame_dif = np.zeros(listLocalizations[:,0].size)
     
 for N in range(0, Ntimes_min_div+1):
-
+    print(N)
     min_div_N = int(min_div)
     min_range = min_div_N*N
     max_range = (min_div_N*(N+1))
@@ -145,7 +145,7 @@ y_idx = listLocalizations[idx_filtered,1].T
 frame_idx = listLocalizations[idx_filtered,2].T
 photons_idx = listLocalizations[idx_filtered,3].T
 
-# For the "N0 Calibration" operation, there is no "Z calculation", 
+# For the "N0 Calibration" operation, there is no "Z calculation",  
 # because the aim of this procedure is to obtain N0 from a sample which 
 # is supposed to contain molecules located at z ~ 0.
 xl = np.array([np.amax(x_idx), np.amin(x_idx)]) 
@@ -161,17 +161,34 @@ def gauss(x, *p):
     A, mu, sigma = p
     return A*np.exp(-(x-mu)**2/(2.*sigma**2))
 
+
 # p0 is the initial guess for the fitting coefficients (A, mu and sigma above)
 A0 = np.max(hist)
-mu0 = np.mean(bin_centres)
-sigma0 = np.std(bin_centres)
+mu0 = bin_centres[np.argmax(hist)]
+#mu0 = np.mean(photons_idx[c])
+sigma0 = np.std(photons_idx[c])
 p0 = [A0, mu0, sigma0]
-coeff, var_matrix = curve_fit(gauss, bin_centres, hist, p0=p0)   
+coeff, var_matrix = curve_fit(gauss, bin_centres, hist, p0=p0) 
+
+# exp fit of the N0 distribution
+#def expf(x, *p):
+#    a, b, d = p
+#    return a*np.exp(-b*(x-d))
+#
+## p0 is the initial guess for the fitting coefficients (A, mu and sigma above)
+#a0 = np.max(hist)/2
+#b0 = np.mean(hist)
+#d0 = b0/2
+#p0 = [a0, b0, d0]
+#coeff, var_matrix = curve_fit(expf, bin_centres[1:], hist[1:], p0=p0)   
 
 # Get the fitted curve
-N0c = np.arange(bin_edges[0], bin_edges[-1], 100)
+N0c = np.arange(bin_edges[1], bin_edges[-1], 100)
 hist_fit = gauss(N0c, *coeff)
-# plt.plot(bin_centres, hist, label='Non-fit data')
-plt.hist(photons_idx[c], bins = 40)
+plt.figure()
+plt.plot(bin_centres, hist, label='Non-fit data')
+#plt.figure()
+plt.hist(photons_idx[c], bins = 40, color = "skyblue", ec="gray")
 plt.plot(N0c, hist_fit, label='Fitted data')
-plt.show()
+plt.legend()
+#plt.show()

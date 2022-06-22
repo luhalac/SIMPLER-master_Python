@@ -13,7 +13,7 @@ pyuic5 -x SIMPLER_GUI_design.ui -o SIMPLER_GUI_design.py
 
 import os
 
-os.chdir(r'C:\Users\Lucia\Documents\NanoFísica\SIMPLER\SIMPLER-master_Python')
+os.chdir(r'C:\Users\Lucia\Documents\GitHub\SIMPLER-master_Python')
 
 import ctypes
 from skimage import io
@@ -24,6 +24,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
 from circlefit import CircleFit
+from skimage.morphology import square, dilation, disk
 
 
 
@@ -82,7 +83,7 @@ class Frontend(QtGui.QMainWindow):
         self.illumcorr.stateChanged.connect(self.emit_param)
         
         self.fitcircle1 = self.ui.checkBox_fitcircle
-        self.illumcorr.stateChanged.connect(self.fine_tune)
+#        self.illumcorr.stateChanged.connect(self.fine_tune)
         
         
         
@@ -319,6 +320,7 @@ class Frontend(QtGui.QMainWindow):
             return
     
     def select_N0calibfile(self):    
+        
         try:
             root = Tk()
             root.withdraw()
@@ -326,9 +328,10 @@ class Frontend(QtGui.QMainWindow):
                                                       title = 'Select calibration file')
             if root.filenameN0calib != '':
                 self.ui.lineEdit_N0calibfilename.setText(root.filenameN0calib)
-                
+        
         except OSError:
             pass
+
         
         if root.filenameN0calib == '':
             return
@@ -611,7 +614,8 @@ class Frontend(QtGui.QMainWindow):
             
             #set up histogram for the rendered image
             hist1 = pg.HistogramLUTItem(image=img1)   #set up histogram for the liveview image
-            hist1.vb.setLimits(yMin=0, yMax=np.max(B[0])) 
+            hist1.vb.setLimits(yMin=0, yMax=np.max(B[0]))
+            hist1.gradient.loadPreset('viridis')
             for tick in hist1.gradient.ticks:
                 tick.hide()
             renderWidgetxz.addItem(hist1, row=0, col=1)
@@ -632,6 +636,7 @@ class Frontend(QtGui.QMainWindow):
             #set up histogram for the rendered image
             hist2 = pg.HistogramLUTItem(image=img2)   #set up histogram for the liveview image
             hist2.vb.setLimits(yMin=0, yMax=np.max(B[1])) 
+            hist2.gradient.loadPreset('viridis')
             for tick in hist2.gradient.ticks:
                 tick.hide()
             renderWidgetyz.addItem(hist2, row=0, col=1)
@@ -654,7 +659,8 @@ class Frontend(QtGui.QMainWindow):
             
             #set up histogram for the rendered image
             hist = pg.HistogramLUTItem(image=img)   #set up histogram for the liveview image
-            hist.vb.setLimits(yMin=0, yMax=np.max(B))           
+            hist.vb.setLimits(yMin=0, yMax=np.max(B))    
+            hist.gradient.loadPreset('viridis')
             for tick in hist.gradient.ticks:
                 tick.hide()
             renderWidgetxy.addItem(hist, row=0, col=1)
@@ -1115,7 +1121,7 @@ class Backend(QtCore.QObject):
         # located at a distance < max_dist, where max_dist is introduced by user
         # (20 nm by default).
 
-        min_div = 10
+        min_div = 100
         
         # We divide the list into sub-lists of 'min_div' locs to minimize memory usage
 
@@ -1190,18 +1196,18 @@ class Backend(QtCore.QObject):
         phot_corr = np.zeros(photon_raw.size)
         
         # Correction loop
-        profx = np.size(profile,0) 
-        profy = np.size(profile,1) 
+        profx = np.size(profile,1) 
+        profy = np.size(profile,0) 
         
         for i in np.arange(len(phot)):
             if int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) < profy:
-                phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.ceil(ydata[i]))])
+                phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(ydata[i])),int(np.ceil(xdata[i]))])
             elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) < profy:
-                phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.ceil(ydata[i]))])
+                phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(ydata[i])),int(np.ceil(xdata[i]))])
             elif int((np.ceil(xdata[i]))) < profx and int((np.ceil(ydata[i]))) > profy:
-                phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(xdata[i])),int(np.floor(ydata[i]))])
+                phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.ceil(ydata[i])),int(np.floor(xdata[i]))])
             elif int((np.ceil(xdata[i]))) > profx and int((np.ceil(ydata[i]))) > profy:
-                phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(xdata[i])),int(np.floor(ydata[i]))])
+                phot_corr[i] = phot[i]*(max_bg)/(profile[int(np.floor(ydata[i])),int(np.floor(xdata[i]))])
         
         return phot_corr
                     
@@ -1270,26 +1276,25 @@ class Backend(QtCore.QObject):
         #File Importation
         xdata, ydata, frame, photon_raw, bg = self.import_file(filename, fileformat) 
         
-        # Convert x,y,sd values from 'camera subpixels' to nanometres
-        x = xdata * self.pxsize
-        y = ydata * self.pxsize
-
+        xloc = xdata/self.pxsize
+        yloc = ydata/self.pxsize
+               
         
         # Correct photon counts if illum profile not uniform 
         if self.illum == True:
-                        
+                       
             calibfilename = self.N0calibfilename
-            phot_corr = self.illum_correct(calibfilename, photon_raw, ydata, xdata)            
+            phot_corr = self.illum_correct(calibfilename, photon_raw, xloc, yloc)            
      
         else:
             phot_corr = photon_raw
-        
-
+          
+        print(len(phot_corr))
         # Filter localizations using max dist
 
         max_dist = self.maxdist # Value in nanometers
           
-        x,y,photons,framef = self.filter_locs(x, y, frame, phot_corr, max_dist)
+        x,y,photons,framef = self.filter_locs(xdata, ydata, frame, phot_corr, max_dist)
         
         # For the "N0 Calibration" operation, there is no "Z calculation", 
         # because the aim of this procedure is to obtain N0 from a sample which 
@@ -1297,6 +1302,8 @@ class Backend(QtCore.QObject):
         c = np.arange(0,np.size(x))
         
         photonsc = photons[c]
+        
+
         hist, bin_edges = np.histogram(photonsc, bins = 40, density = False)
         bin_limits = np.array([bin_edges[0], bin_edges[-1]])
         bin_centres = (bin_edges[:-1] + bin_edges[1:])/2
@@ -1318,10 +1325,8 @@ class Backend(QtCore.QObject):
         
         self.N0m = np.round(coeff[1])
         self.sigmaN0 = np.round(coeff[2])
-        
-        
-        
-        self.sendupdateN0Signal.emit(self.N0m, self.sigmaN0, photons, histfit)
+                
+        self.sendupdateN0Signal.emit(self.N0m, self.sigmaN0, photonsc, histfit)
         
 
         
@@ -1549,12 +1554,12 @@ class Backend(QtCore.QObject):
         
         xdata, ydata, frame, photon_raw, bg = self.import_file(filename, fileformat)
         
-        # Convert x,y,sd values from 'camera subpixels' to nanometres
-        x = xdata * self.pxsize
-        y = ydata * self.pxsize
+        # Convert x,y,sd values from nanometers to 'camera subpixels'
+        xloc = xdata/self.pxsize
+        yloc = ydata/self.pxsize
         
         ## Excitation profile calculation and exportation:
-        Img_bg = np.zeros((np.int(np.ceil(np.max(xdata))), np.int(np.ceil(np.max(ydata)))))
+        Img_bg = np.zeros((np.int(np.ceil(np.max(yloc))), np.int(np.ceil(np.max(xloc)))))
         # Empty matrix to be filled with background values pixel-wise.
              
         Count_molec_px = Img_bg # Empty matrix to be filled with the number of molecules
@@ -1564,16 +1569,16 @@ class Backend(QtCore.QObject):
         # order to speed up the analysis and avoid redundancy.
         vector_indices = np.arange(0,np.size(xdata))
         c_random = np.random.permutation(np.size(vector_indices))
-        length_c_random = np.int(np.min([1e+6, np.size(x)]))
+        length_c_random = np.int(np.min([1e+6, np.size(xdata)]))
         range_c = range(0,length_c_random)
         c = c_random[range_c]
         
         
-        for i in range(0, np.size(x[c])):
+        for i in range(0, np.size(xdata[c])):
             
             # The #molecules used to calculate local background in current pixel is updated.
-            xind = np.int(np.ceil(xdata[c[i]]))-1
-            yind = np.int(np.ceil(ydata[c[i]]))-1
+            xind = np.int(np.ceil(yloc[c[i]]))-1
+            yind = np.int(np.ceil(xloc[c[i]]))-1
             Count_molec_px[xind, yind] = Count_molec_px[xind, yind] + 1
             Count_i = Count_molec_px[xind, yind]
             
@@ -1586,6 +1591,7 @@ class Backend(QtCore.QObject):
                 Img_bg[xind, yind] = bg[c[i]]
    
         self.sendbgSignal.emit(Img_bg)
+#        np.savetxt(filename, Img_bg, delimiter=',')
 
    
     
@@ -1639,6 +1645,9 @@ class Backend(QtCore.QObject):
         # from nm to px
         SMr = self.r_ori/self.pxsize_render
         SMz = self.z_ori/self.pxsize_render
+        
+        SMr[np.isnan(SMr)] = 0
+        SMz[np.isnan(SMz)] = 0
         
         # Definition of pixels affected by the list of SM (+- 5*sigma)
         A = np.zeros((np.int(np.ceil(max_r/self.pxsize_render)), np.int(np.ceil(max_z/self.pxsize_render))))
