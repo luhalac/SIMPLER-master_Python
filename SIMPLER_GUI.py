@@ -25,6 +25,7 @@ from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
 from circlefit import CircleFit
 from skimage.morphology import square, dilation, disk
+import tools.utils as utils
 
 
 
@@ -52,6 +53,7 @@ class Frontend(QtGui.QMainWindow):
     loadfileSignal = pyqtSignal()
     loadcalibfileSignal = pyqtSignal()
     updatecalSignal = pyqtSignal()
+    expdataSignal = pyqtSignal()
     finetuneSignal = pyqtSignal()
     finetunefitSignal = pyqtSignal()
     N0calSignal = pyqtSignal()
@@ -126,6 +128,9 @@ class Frontend(QtGui.QMainWindow):
         
         self.updatecal = self.ui.pushButton_updatecal
         self.updatecal.clicked.connect(self.update_cal)
+        
+        self.expdata = self.ui.pushButton_exportdata
+        self.expdata.clicked.connect(self.export_data)
         
         self.N0cal = self.ui.pushButton_N0cal
         self.N0cal.clicked.connect(self.N0_cal)
@@ -355,6 +360,11 @@ class Frontend(QtGui.QMainWindow):
         
         self.emit_param()
         self.updatecalSignal.emit()
+        
+    def export_data(self):
+        
+        self.emit_param()
+        self.expdataSignal.emit()
         
     def N0_cal(self):
         
@@ -944,6 +954,7 @@ class Backend(QtCore.QObject):
     sendtuneSignal = pyqtSignal(np.ndarray)
     sendtunefitSignal = pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
     sendbgSignal = pyqtSignal(np.ndarray)
+    
    
         
     def __init__(self, *args, **kwargs):
@@ -1057,6 +1068,7 @@ class Backend(QtCore.QObject):
     
     def import_file(self,filename, fileformat):
         
+        self.dataz = False
         #File Importation
         if fileformat == 0: # Importation procedure for Picasso hdf5 files.
             
@@ -1215,7 +1227,7 @@ class Backend(QtCore.QObject):
     @pyqtSlot()   
     def SIMPLER_function(self):
          
-        
+                
         filename = self.filename
         fileformat = self.fileformat
         xdata, ydata, frame, photon_raw, bg = self.import_file(filename, fileformat)
@@ -1262,9 +1274,11 @@ class Backend(QtCore.QObject):
         self.r = np.cos(tita2)*r
         print(4)
                    
-        simpler_output = np.column_stack((self.x, self.y, self.r, self.z, photons, framef))
+        self.simpler_output = np.column_stack((self.x, self.y, self.r, self.z, photons, framef))
         print(5)
-        self.sendSIMPLERSignal.emit(simpler_output, frame)
+        self.sendSIMPLERSignal.emit(self.simpler_output, frame)
+        
+        self.dataz = True
     
     @pyqtSlot()
     def N0_calibration(self):
@@ -1329,6 +1343,32 @@ class Backend(QtCore.QObject):
         self.sendupdateN0Signal.emit(self.N0m, self.sigmaN0, photonsc, histfit)
         
 
+    @pyqtSlot()
+    def export_data(self):
+        
+        if self.dataz == False:
+    
+            print('notokexpdata')
+            
+        else:
+             print('okexpdata')
+        
+        filename = os.path.splitext(self.filename)[0]
+        print(filename)
+        dataName = utils.insertSuffix(filename, '_dataxyz')    
+        
+        print(dataName)
+        n = 1
+        while os.path.exists(dataName+ '.npy'):
+            if n > 1:
+                dataName = dataName.replace('_{}'.format(n - 1), '_{}'.format(n))
+                print(dataName)
+            else:
+                dataName = utils.insertSuffix(dataName, '_{}'.format(n))
+            n += 1    
+        
+        np.save(dataName,self.simpler_output)
+        
         
         
     @pyqtSlot()    
@@ -1696,6 +1736,7 @@ class Backend(QtCore.QObject):
         
         frontend.paramSignal.connect(self.get_frontend_param)
         frontend.updatecalSignal.connect(self.getParameters_SIMPLER)
+        frontend.expdataSignal.connect(self.export_data)
         frontend.finetuneSignal.connect(self.fine_tune)
         frontend.finetunefitSignal.connect(self.finetunefit)
         frontend.N0calSignal.connect(self.N0_calibration)

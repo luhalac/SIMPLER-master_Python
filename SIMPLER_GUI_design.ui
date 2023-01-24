@@ -24,7 +24,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>5</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="SIMPLER">
      <attribute name="title">
@@ -774,6 +774,19 @@
        <set>Qt::AlignCenter</set>
       </property>
      </widget>
+     <widget class="QPushButton" name="pushButton_exportdata">
+      <property name="geometry">
+       <rect>
+        <x>280</x>
+        <y>450</y>
+        <width>171</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Export x,y,z, data</string>
+      </property>
+     </widget>
      <zorder>groupBox_files</zorder>
      <zorder>lineEdit_maxdist</zorder>
      <zorder>label_14</zorder>
@@ -785,6 +798,7 @@
      <zorder>groupBox</zorder>
      <zorder>pushButton_updatecal</zorder>
      <zorder>lineEdit_updatecal</zorder>
+     <zorder>pushButton_exportdata</zorder>
     </widget>
     <widget class="QWidget" name="N0caltab">
      <attribute name="title">

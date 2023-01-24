@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'SIMPLER_GUI_design.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.2
+# Created by: PyQt5 UI code generator 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -222,6 +222,9 @@ class Ui_MainWindow(object):
         self.lineEdit_updatecal.setFont(font)
         self.lineEdit_updatecal.setAlignment(QtCore.Qt.AlignCenter)
         self.lineEdit_updatecal.setObjectName("lineEdit_updatecal")
+        self.pushButton_exportdata = QtWidgets.QPushButton(self.SIMPLER)
+        self.pushButton_exportdata.setGeometry(QtCore.QRect(280, 450, 171, 41))
+        self.pushButton_exportdata.setObjectName("pushButton_exportdata")
         self.groupBox_files.raise_()
         self.lineEdit_maxdist.raise_()
         self.label_14.raise_()
@@ -233,6 +236,7 @@ class Ui_MainWindow(object):
         self.groupBox.raise_()
         self.pushButton_updatecal.raise_()
         self.lineEdit_updatecal.raise_()
+        self.pushButton_exportdata.raise_()
         self.tabWidget.addTab(self.SIMPLER, "")
         self.N0caltab = QtWidgets.QWidget()
         self.N0caltab.setObjectName("N0caltab")
@@ -541,7 +545,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
-        self.tabWidget.setCurrentIndex(5)
+        self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -592,6 +596,7 @@ class Ui_MainWindow(object):
 "(non flat illumination)"))
         self.pushButton_updatecal.setText(_translate("MainWindow", "Update calibration \n"
 "(dF & αF )"))
+        self.pushButton_exportdata.setText(_translate("MainWindow", "Export x,y,z, data"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.SIMPLER), _translate("MainWindow", "SIMPLER"))
         self.pushButton_N0cal.setText(_translate("MainWindow", "N0 calibration"))
         self.groupBox_files_2.setTitle(_translate("MainWindow", "Load SMLM data and Illumination profile "))
