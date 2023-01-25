@@ -1354,20 +1354,23 @@ class Backend(QtCore.QObject):
              print('okexpdata')
         
         filename = os.path.splitext(self.filename)[0]
-        print(filename)
-        dataName = utils.insertSuffix(filename, '_dataxyz')    
+        dataName = utils.insertSuffix(filename, '_dataxyz.csv')    
         
-        print(dataName)
         n = 1
-        while os.path.exists(dataName+ '.npy'):
+        while os.path.exists(dataName+ '.csv'):
             if n > 1:
                 dataName = dataName.replace('_{}'.format(n - 1), '_{}'.format(n))
                 print(dataName)
             else:
                 dataName = utils.insertSuffix(dataName, '_{}'.format(n))
             n += 1    
-        
-        np.save(dataName,self.simpler_output)
+            
+        x = self.simpler_output[:,0]
+        y = self.simpler_output[:,1]
+        z = self.simpler_output[:,3]
+        dataxyz = np.column_stack((x,y,z))
+        np.savetxt(dataName,dataxyz, delimiter = ",", header="x [nm], y [nm], z [nm]")
+        # np.save(dataName,self.simpler_output)
         
         
         
