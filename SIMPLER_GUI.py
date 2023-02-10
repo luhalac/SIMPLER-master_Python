@@ -551,16 +551,34 @@ class Frontend(QtGui.QMainWindow):
         zroi = self.zind[index]
         
         if self.buttonxy.isChecked():
-            self.selected = pg.ScatterPlotItem(xroi, yroi, pen = self.pen1,
-                                               brush = None, size = self.pointsize)    
+            
+            cmapz = cm.get_cmap('viridis', np.size(yroi))
+            col = cmapz.colors
+            col = np.delete(col, np.s_[3], axis=1)
+            col = 255*col
+            self.col = col
+            self.selected = pg.ScatterPlotItem(xroi, yroi, pen = pg.mkPen(None),
+                                               brush=[pg.mkBrush(v) for v in col], size = self.pointsize)    
             
         if self.buttonxz.isChecked():
-            self.selected = pg.ScatterPlotItem(xroi, zroi, pen=self.pen2,
-                                               brush = None, size = self.pointsize)
+            
+            cmapz = cm.get_cmap('viridis', np.size(zroi))
+            col = cmapz.colors
+            col = np.delete(col, np.s_[3], axis=1)
+            col = 255*col
+            self.col = col
+            self.selected = pg.ScatterPlotItem(xroi, zroi, pen=pg.mkPen(None),
+                                               brush=[pg.mkBrush(v) for v in col], size = self.pointsize)
             
         if self.buttonyz.isChecked():
-            self.selected = pg.ScatterPlotItem(yroi, zroi, pen=self.pen3,
-                                               brush = None, size = self.pointsize)
+            
+            cmapz = cm.get_cmap('viridis', np.size(zroi))
+            col = cmapz.colors
+            col = np.delete(col, np.s_[3], axis=1)
+            col = 255*col
+            self.col = col
+            self.selected = pg.ScatterPlotItem(yroi, zroi, pen=pg.mkPen(None),
+                                               brush=[pg.mkBrush(v) for v in col], size = self.pointsize)
         
         else:
             pass
