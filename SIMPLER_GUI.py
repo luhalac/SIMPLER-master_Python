@@ -26,6 +26,7 @@ from scipy.interpolate import interp1d
 from circlefit import CircleFit
 from skimage.morphology import square, dilation, disk
 import tools.utils as utils
+from scipy.ndimage import gaussian_filter
 
 
 
@@ -660,7 +661,7 @@ class Frontend(QtGui.QMainWindow):
           
     
             # image widget set-up and layout
-            vb = renderWidgetrz.addPlot(row=0, col=0)
+            vb = renderWidgetxy.addPlot(row=0, col=0)
     
             img = pg.ImageItem(B)
             vb.clear()
@@ -1369,7 +1370,7 @@ class Backend(QtCore.QObject):
         y = self.simpler_output[:,1]
         z = self.simpler_output[:,3]
         dataxyz = np.column_stack((x,y,z))
-        np.savetxt(dataName,dataxyz, delimiter = ",", header="x [nm], y [nm], z [nm]")
+        np.savetxt(dataName,dataxyz, delimiter = ",")
         # np.save(dataName,self.simpler_output)
         
         
@@ -1696,36 +1697,43 @@ class Backend(QtCore.QObject):
         A = np.zeros((np.int(np.ceil(max_r/self.pxsize_render)), np.int(np.ceil(max_z/self.pxsize_render))))
 
         for i in np.arange(len(SMr)):
-            A[int(np.floor(SMr[i])), int(np.floor(SMz[i]))] = 1    
+            A[int(np.floor(SMr[i])), int(np.floor(SMz[i]))] = 1   
         
-        sigma_width_nm = np.max([self.sigma_lat, self.sigma_ax]);
-        sigma_width_px = sigma_width_nm/self.pxsize_render;
-        sd = disk(int(np.round(5*sigma_width_px)));
-        # This matrix contains 1 in +- 5 sigma units around the SM positions
-        A_affected = dilation(A,sd);
-        # r and z positions affected
-        indaffected = np.where(A_affected==1)
-        raffected = indaffected[0]
-        zaffected = indaffected[1]
         
-        #'PSF' is a function that calculates the value for a given position (r,z)
-        # assuming a 2D Gaussian distribution centered at (SMr(k),SMz(k))
-        def PSF(r, z, SMr, SMz, I):
-            psf = (I/(2*np.pi*sigma_latpx*sigma_axpx))*np.exp(-(((r-SMr)**2)/(2*sigma_latpx**2) + ((z-SMz)**2)/(2*sigma_axpx**2)))
-            return psf
         
-        # B = empty matrix that will be filled with the values given by the
-        # Gaussian blur of the points listed in (SMr, SMz)
-        B = np.zeros((np.int(np.ceil(5*sigma_width_px+(max_r/self.pxsize_render))), 
-              np.int(np.ceil(5*sigma_width_px+(max_z/self.pxsize_render)))))
+        # sigma_width_nm = np.max([self.sigma_lat, self.sigma_ax]);
+        # sigma_width_px = sigma_width_nm/self.pxsize_render;
         
-        # For each molecule from the list
-        for k in np.arange(len(SMr)):
-        # For each pixel of the final image with a value different from zero
-            for i in np.arange(len(raffected)): 
-                B[raffected[i],zaffected[i]] = B[raffected[i],zaffected[i]] + PSF(raffected[i],zaffected[i],SMr[k],SMz[k],1)
-                # Each 'affected' pixel (i) will take the value that had at the beggining
-                # of the k-loop + the value given by the distance to the k-molecule.
+        sigma = np.array((sigma_latpx,sigma_axpx))
+
+        B = gaussian_filter(A, sigma)
+        
+        # sd = disk(int(np.round(5*sigma_width_px)));
+        # # This matrix contains 1 in +- 5 sigma units around the SM positions
+        # A_affected = dilation(A,sd);
+        # # r and z positions affected
+        # indaffected = np.where(A_affected==1)
+        # raffected = indaffected[0]
+        # zaffected = indaffected[1]
+        
+        # #'PSF' is a function that calculates the value for a given position (r,z)
+        # # assuming a 2D Gaussian distribution centered at (SMr(k),SMz(k))
+        # def PSF(r, z, SMr, SMz, I):
+        #     psf = (I/(2*np.pi*sigma_latpx*sigma_axpx))*np.exp(-(((r-SMr)**2)/(2*sigma_latpx**2) + ((z-SMz)**2)/(2*sigma_axpx**2)))
+        #     return psf
+        
+        # # B = empty matrix that will be filled with the values given by the
+        # # Gaussian blur of the points listed in (SMr, SMz)
+        # B = np.zeros((np.int(np.ceil(5*sigma_width_px+(max_r/self.pxsize_render))), 
+        #       np.int(np.ceil(5*sigma_width_px+(max_z/self.pxsize_render)))))
+        
+        # # For each molecule from the list
+        # for k in np.arange(len(SMr)):
+        # # For each pixel of the final image with a value different from zero
+        #     for i in np.arange(len(raffected)): 
+        #         B[raffected[i],zaffected[i]] = B[raffected[i],zaffected[i]] + PSF(raffected[i],zaffected[i],SMr[k],SMz[k],1)
+        #         # Each 'affected' pixel (i) will take the value that had at the beggining
+        #         # of the k-loop + the value given by the distance to the k-molecule.
         
         return B
     
