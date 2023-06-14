@@ -12,6 +12,7 @@ pyuic5 -x SIMPLER_GUI_design.ui -o SIMPLER_GUI_design.py
 """
 
 import os
+import time
 
 os.chdir(r'C:\Users\Lucia\Documents\GitHub\SIMPLER-master_Python')
 
@@ -1151,8 +1152,9 @@ class Backend(QtCore.QObject):
         # We keep a molecule if there is another one in the previous and next frame,
         # located at a distance < max_dist, where max_dist is introduced by user
         # (20 nm by default).
-
-        min_div = 100
+        
+        # runs faster for smaller min_div(100 in matlab version, 5 in python)
+        min_div = 5
         
         # We divide the list into sub-lists of 'min_div' locs to minimize memory usage
 
@@ -1263,38 +1265,68 @@ class Backend(QtCore.QObject):
         else:
             phot_corr = photon_raw
         print(0)
+        t = time.localtime()
+        current_time = time.strftime("%H:%M:%S", t)
+        print(current_time)
         # Filter localizations using max dist
         max_dist = self.maxdist # Value in nanometers
         print(1)
+        t = time.localtime()
+        current_time = time.strftime("%H:%M:%S", t)
+        print(current_time)
         self.x,self.y,photons,framef = self.filter_locs(x, y, frame, phot_corr, max_dist)
         print(2)
+        t = time.localtime()
+        current_time = time.strftime("%H:%M:%S", t)
+        print(current_time)
                    
         # SIMPLER z estimation
         z1 = (np.log(self.alphaF*self.N0)-np.log(photons-(1-self.alphaF)*self.N0))/(1/self.dF)
         z = np.real(z1)
         self.z = z.flatten()
         print(3)
+        t = time.localtime()
+        current_time = time.strftime("%H:%M:%S", t)
+        print(current_time)
         # Compute radial coordinate r from (x,y)   
         P = np.polyfit(self.x,self.y,1)
         print(4)
+        t = time.localtime()
+        current_time = time.strftime("%H:%M:%S", t)
+        print(current_time)
         def Poly_fun(x):
             y_polyfunc = P[0]*x + P[1]
             return y_polyfunc
         print(5)
+        t = time.localtime()
+        current_time = time.strftime("%H:%M:%S", t)
+        print(current_time)
         Origin_X = 0.999999*min(self.x)
         Origin_Y = Poly_fun(Origin_X)
         print(6)
+        t = time.localtime()
+        current_time = time.strftime("%H:%M:%S", t)
+        print(current_time)
         # Change from cartesian to polar coordinates
         tita = np.arctan(P[0])
         tita1 = np.arctan((self.y-Origin_Y)/(self.x-Origin_X))
         print(7)
+        t = time.localtime()
+        current_time = time.strftime("%H:%M:%S", t)
+        print(current_time)
         r = ((self.x-Origin_X)**2+(self.y-Origin_Y)**2)**(1/2)
         tita2 = [x - tita for x in tita1]
         self.r = np.cos(tita2)*r
-        print(4)
+        print(8)
+        t = time.localtime()
+        current_time = time.strftime("%H:%M:%S", t)
+        print(current_time)
                    
         self.simpler_output = np.column_stack((self.x, self.y, self.r, self.z, photons, framef))
-        print(5)
+        print(9)
+        t = time.localtime()
+        current_time = time.strftime("%H:%M:%S", t)
+        print(current_time)
         self.sendSIMPLERSignal.emit(self.simpler_output, frame)
         
         self.dataz = True
