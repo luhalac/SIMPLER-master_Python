@@ -1833,5 +1833,7 @@ if __name__ == '__main__':
     gui.setWindowIcon(QtGui.QIcon(icon_path))
     gui.show() #Maximized()
     #gui.showFullScreen()
+    
+    gui.show()
         
-    app.exec_()     
+    # app.exec_()     
