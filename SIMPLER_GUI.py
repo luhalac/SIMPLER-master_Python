@@ -13,6 +13,7 @@ pyuic5 -x SIMPLER_GUI_design.ui -o SIMPLER_GUI_design.py
 
 import os
 import time
+import cProfile
 
 os.chdir(r'C:\Users\Lucia\Documents\GitHub\SIMPLER-master_Python')
 
@@ -438,6 +439,7 @@ class Frontend(QtGui.QMainWindow):
         col = np.delete(col, np.s_[3], axis=1)
         col = 255*col
         self.col = col
+
         
         if rz_xyz == 0:
             
@@ -446,6 +448,7 @@ class Frontend(QtGui.QMainWindow):
             plotrz = scatterWidget.addPlot(title="Scatter plot small ROI (r,z)")
             plotrz.setLabels(bottom=('r [nm]'), left=('z [nm]'))
             plotrz.setAspectLocked(True)
+
                                  
             
             rz = pg.ScatterPlotItem(rind, self.zind, pen=pg.mkPen(None),
@@ -455,6 +458,7 @@ class Frontend(QtGui.QMainWindow):
                          
             self.empty_layout(self.ui.scatterlayout)
             self.ui.scatterlayout.addWidget(scatterWidget)
+ 
             
         elif rz_xyz == 1:
             
@@ -464,11 +468,13 @@ class Frontend(QtGui.QMainWindow):
             plotxz.setLabels(bottom=('x [nm]'), left=('z [nm]'))
             plotxz.setAspectLocked(True)
             
-            
+
             
             xz = pg.ScatterPlotItem(self.xind, self.zind, pen=pg.mkPen(None),
                                         brush=[pg.mkBrush(v) for v in col],
                                         size = self.pointsize)
+
+            
             plotxz.addItem(xz)
            
                 
@@ -491,6 +497,7 @@ class Frontend(QtGui.QMainWindow):
                 
             self.empty_layout(self.ui.scatterlayout_2)
             self.ui.scatterlayout_2.addWidget(scatterWidgetyz)
+
             
         elif rz_xyz == 2:
             
@@ -533,8 +540,7 @@ class Frontend(QtGui.QMainWindow):
                 
         scatterWidgetROI = pg.GraphicsLayoutWidget()
         plotROI = scatterWidgetROI.addPlot(title="Scatter plot ROI selected")
-        plotROI.setLabels(bottom=('x [nm]'), left=('y [nm]'))
-        plotROI.setAspectLocked(True)
+
         
         xmin, ymin = self.roi.pos()
         xmax, ymax = self.roi.pos() + self.roi.size()
@@ -554,6 +560,9 @@ class Frontend(QtGui.QMainWindow):
         
         if self.buttonxy.isChecked():
             
+            plotROI.setLabels(bottom=('x [nm]'), left=('y [nm]'))
+            plotROI.setAspectLocked(True)
+            
             cmapz = cm.get_cmap('viridis', np.size(yroi))
             col = cmapz.colors
             col = np.delete(col, np.s_[3], axis=1)
@@ -564,6 +573,9 @@ class Frontend(QtGui.QMainWindow):
             
         if self.buttonxz.isChecked():
             
+            plotROI.setLabels(bottom=('x [nm]'), left=('z [nm]'))
+            plotROI.setAspectLocked(True)
+            
             cmapz = cm.get_cmap('viridis', np.size(zroi))
             col = cmapz.colors
             col = np.delete(col, np.s_[3], axis=1)
@@ -573,6 +585,9 @@ class Frontend(QtGui.QMainWindow):
                                                brush=[pg.mkBrush(v) for v in col], size = self.pointsize)
             
         if self.buttonyz.isChecked():
+            
+            plotROI.setLabels(bottom=('y [nm]'), left=('z [nm]'))
+            plotROI.setAspectLocked(True)
             
             cmapz = cm.get_cmap('viridis', np.size(zroi))
             col = cmapz.colors
@@ -1256,70 +1271,39 @@ class Backend(QtCore.QObject):
                     
         else:
             phot_corr = photon_raw
-        print(0)
-        t = time.localtime()
-        current_time = time.strftime("%H:%M:%S", t)
-        print(current_time)
+
         # Filter localizations using max dist
         max_dist = self.maxdist # Value in nanometers
-        print(1)
-        t = time.localtime()
-        current_time = time.strftime("%H:%M:%S", t)
-        print(current_time)
+
         self.x,self.y,photons,framef = self.filter_locs(x, y, frame, phot_corr, max_dist)
-        print(2)
-        t = time.localtime()
-        current_time = time.strftime("%H:%M:%S", t)
-        print(current_time)
+
                    
         # SIMPLER z estimation
         z1 = (np.log(self.alphaF*self.N0)-np.log(photons-(1-self.alphaF)*self.N0))/(1/self.dF)
         z = np.real(z1)
         self.z = z.flatten()
-        print(np.size(self.z))
-        print(3)
-        t = time.localtime()
-        current_time = time.strftime("%H:%M:%S", t)
-        print(current_time)
+
         # Compute radial coordinate r from (x,y)   
         P = np.polyfit(self.x,self.y,1)
-        print(4)
-        t = time.localtime()
-        current_time = time.strftime("%H:%M:%S", t)
-        print(current_time)
+
         def Poly_fun(x):
             y_polyfunc = P[0]*x + P[1]
             return y_polyfunc
-        print(5)
-        t = time.localtime()
-        current_time = time.strftime("%H:%M:%S", t)
-        print(current_time)
+
         Origin_X = 0.999999*min(self.x)
         Origin_Y = Poly_fun(Origin_X)
-        print(6)
-        t = time.localtime()
-        current_time = time.strftime("%H:%M:%S", t)
-        print(current_time)
+
         # Change from cartesian to polar coordinates
         tita = np.arctan(P[0])
         tita1 = np.arctan((self.y-Origin_Y)/(self.x-Origin_X))
-        print(7)
-        t = time.localtime()
-        current_time = time.strftime("%H:%M:%S", t)
-        print(current_time)
+
         r = ((self.x-Origin_X)**2+(self.y-Origin_Y)**2)**(1/2)
         tita2 = [x - tita for x in tita1]
         self.r = np.cos(tita2)*r
-        print(8)
-        t = time.localtime()
-        current_time = time.strftime("%H:%M:%S", t)
-        print(current_time)
+
                    
         self.simpler_output = np.column_stack((self.x, self.y, self.r, self.z, photons, framef))
-        print(9)
-        t = time.localtime()
-        current_time = time.strftime("%H:%M:%S", t)
-        print(current_time)
+
         self.sendSIMPLERSignal.emit(self.simpler_output, frame)
         
         self.dataz = True
@@ -1828,5 +1812,7 @@ if __name__ == '__main__':
     #gui.showFullScreen()
     
     gui.show()
+    
+    
         
     # app.exec_()     
