@@ -28,6 +28,7 @@ from circlefit import CircleFit
 from skimage.morphology import square, dilation, disk
 import tools.utils as utils
 from scipy.ndimage import gaussian_filter
+from scipy.spatial.distance import cdist
 
 
 
@@ -897,7 +898,7 @@ class Frontend(QtGui.QMainWindow):
         self.ui.bgLayout.addWidget(bgWidget)
      
     
-    @pyqtSlot(np.float, np.float)    
+    @pyqtSlot(float, float)    
     def dispupdateparam(self, dF, alphaF):
         
            
@@ -906,7 +907,7 @@ class Frontend(QtGui.QMainWindow):
         self.ui.lineEdit_updatecal.setText(text)
         
     
-    @pyqtSlot(np.float, np.float, np.ndarray, np.ndarray)    
+    @pyqtSlot(float, float, np.ndarray, np.ndarray)    
     def dispN0(self, N0m, sigmaN0, photonsc, histfit):
         
         text = '<N0>=' + str(np.int(N0m)) +\
@@ -967,8 +968,8 @@ class Frontend(QtGui.QMainWindow):
 class Backend(QtCore.QObject):
 
     paramSignal = pyqtSignal(dict)
-    sendupdatecalSignal = pyqtSignal(np.float, np.float)
-    sendupdateN0Signal = pyqtSignal(np.float, np.float, np.ndarray, np.ndarray)
+    sendupdatecalSignal = pyqtSignal(float, float)
+    sendupdateN0Signal = pyqtSignal(float, float, np.ndarray, np.ndarray)
     sendSIMPLERSignal = pyqtSignal(np.ndarray, np.ndarray)
     sendrenderSignal = pyqtSignal(np.ndarray)
     sendtuneSignal = pyqtSignal(np.ndarray)
@@ -1153,58 +1154,49 @@ class Backend(QtCore.QObject):
         # located at a distance < max_dist, where max_dist is introduced by user
         # (20 nm by default).
         
-        # runs faster for smaller min_div(100 in matlab version, 5 in python)
-        min_div = 5
+        # Define parameters
+        min_div = 100
+        max_dist = 20  # Value in nanometers
         
-        # We divide the list into sub-lists of 'min_div' locs to minimize memory usage
-
-        Ntimes_min_div = int((listLocalizations[:,0].size/min_div))
-        truefalse_sum_roi_acum = []
+        # Calculate the number of sub-divisions
+        n_subdivisions = int(np.ceil(listLocalizations.shape[0] / min_div))
         
-        daa = np.zeros(listLocalizations[:,0].size)
-        frame_dif = np.zeros(listLocalizations[:,0].size)
+        # Initialize the filtered indices
+        filtered_indices = []
         
-        for N in range(0, Ntimes_min_div+1):
+        # Iterate over the sub-divisions
+        for n in range(n_subdivisions):
+            start_idx = n * min_div
+            end_idx = (n + 1) * min_div
             
-            
-            min_div_N = int(min_div)
-            min_range = min_div_N*N
-            max_range = (min_div_N*(N+1))
-           
-            if N == Ntimes_min_div:
-                min_div_N = int(listLocalizations[:,0].size - min_div *(Ntimes_min_div))
-                max_range = int(listLocalizations[:,0].size)
-               
-            truefalse = np.zeros((min_div_N,min_div_N))
-            
-            # This matrix relates each localization with the rest of localizations.
-            # It will take a value of 1 if the molecules i and j (i = row, j = column)
-            # are located at distances < max_dist, and are detected in frames N and (N+1)
-            # or (N-1). In any other case, it will take a value of 0.
+            if end_idx > listLocalizations.shape[0]:
+                end_idx = listLocalizations.shape[0]
         
-                       
-            for i in range(min_range, max_range):
-                for j in range(min_range, max_range):
-                    daa[j-min_div_N*(N)] = ((x[i]-x[j])**2+(y[i]-y[j])**2)**(1/2)
-                    frame_dif[j-min_div_N*(N)] = ((listLocalizations[i,2] - listLocalizations[j,2])**2)**(1/2)
-                    if daa[(j-min_div_N*(N))] < max_dist and frame_dif[(j-min_div_N*(N))] == 1:
-                        truefalse[(i-min_range),(j-min_range)] = 1
-            
-            truefalse_sum = truefalse.sum(axis=0)  
-            # For each row (i.e. each molecule) we calculate the sum of every
-            # column from the 'truefalse' matrix.
-       
-            truefalse_sum_roi_acum = np.append(truefalse_sum_roi_acum, truefalse_sum)
-           
-        # We choose the indexes of those rows whose columnwise sum is > or = to 2
-        idx_filtered = np.where(truefalse_sum_roi_acum > 1)
+            # Extract the relevant subset of data for the current sub-division
+            subset = listLocalizations[start_idx:end_idx]
         
-        # APPLYING FILTER TO THE ORIGINAL LIST 
-
-        x = listLocalizations[idx_filtered,0].T
-        y = listLocalizations[idx_filtered,1].T
-        photons = listLocalizations[idx_filtered,3].T
-        framef = listLocalizations[idx_filtered,2].T
+            # Calculate pairwise distances between all localizations in the subset
+            dist_matrix = cdist(subset[:, :2], subset[:, :2])
+        
+            # Calculate frame differences between all localizations in the subset
+            frame_diffs = np.abs(subset[:, 2, np.newaxis] - subset[:, 2])
+        
+            # Create a boolean mask indicating localizations that satisfy the distance and frame difference conditions
+            mask = np.logical_and(dist_matrix < max_dist, frame_diffs == 1)
+        
+            # Count the number of valid connections for each localization
+            sum_mask = mask.sum(axis=0)
+        
+            # Filter the indices of localizations that have more than one valid connection
+            filtered_indices.extend(np.where(sum_mask > 1)[0] + start_idx)
+        
+        # Filter the original array based on the selected indices
+        listLocalizations_filtered = listLocalizations[filtered_indices]
+        
+        x = listLocalizations_filtered[:,0].T
+        y = listLocalizations_filtered[:,1].T
+        photons = listLocalizations_filtered[:,3].T
+        framef = listLocalizations_filtered[:,2].T
         
         x = x.flatten()
         y = y.flatten()
@@ -1284,6 +1276,7 @@ class Backend(QtCore.QObject):
         z1 = (np.log(self.alphaF*self.N0)-np.log(photons-(1-self.alphaF)*self.N0))/(1/self.dF)
         z = np.real(z1)
         self.z = z.flatten()
+        print(np.size(self.z))
         print(3)
         t = time.localtime()
         current_time = time.strftime("%H:%M:%S", t)
