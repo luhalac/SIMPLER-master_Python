@@ -170,8 +170,6 @@ class Frontend(QtGui.QMainWindow):
         self.selectop.currentIndexChanged.connect(self.emit_param)
         
         # vertical slider to control point size in scatter
-        self.slider = self.ui.verticalSlider    
-        self.slider.valueChanged.connect(self.valuechange)
         self.pointsize = 5 
         
         # lateral range and binning for fine tunning rel z hist
@@ -401,7 +399,6 @@ class Frontend(QtGui.QMainWindow):
         
     def valuechange(self):
         
-        self.pointsize = self.slider.value()
         self.scatterplot(self.simpler_output)
         self.updateROIPlot()
     
@@ -439,6 +436,7 @@ class Frontend(QtGui.QMainWindow):
         col = np.delete(col, np.s_[3], axis=1)
         col = 255*col
         self.col = col
+
 
         
         if rz_xyz == 0:
@@ -520,6 +518,8 @@ class Frontend(QtGui.QMainWindow):
             self.empty_layout(self.ui.scatterlayout)
             self.ui.scatterlayout.addWidget(scatterWidgetlarge)
             
+
+            
             npixels = np.size(x)
             ROIpos = (int(min(x)), int(min(y)))
             ROIextent = int(npixels/3)
@@ -531,7 +531,9 @@ class Frontend(QtGui.QMainWindow):
             self.roi.setZValue(10)
             self.roi.addScaleHandle([1, 1], [0, 0])
             self.roi.addRotateHandle([0, 0], [1, 1])                             
-            plotxylarge.addItem(self.roi)         
+            plotxylarge.addItem(self.roi)   
+
+            
                                              
 
                 
